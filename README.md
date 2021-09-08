@@ -28,3 +28,4 @@ This is a Tkinter based cloth/rope simulator in python. This is more of an exper
 - Simulation Performance
 - Not clear on how to use
 - Dodgy cleanup/reset code
+- Looks Ugly
