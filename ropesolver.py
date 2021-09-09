@@ -233,10 +233,10 @@ def GetClosestPointThreshold(pos, thresh):
 
     return closest
 
-def Clear():
+def Clear(overrideClick=False):
     global statusText, canClick
 
-    if canClick:
+    if canClick or overrideClick:
         canClick = False
         statusText = "Clearing"
         for point in points:
@@ -475,7 +475,7 @@ def PauseHandler(event):
 
 # ------------[LOADING]------------
 def SaveToFile(event=None):
-    global simNow, points, sticks, statusText, canClick
+    global simNow, points, sticks, statusText, canClick, gravity, numIterations
     
     if canClick: 
         if not simNow:
@@ -496,21 +496,24 @@ def SaveToFile(event=None):
                 for stick in sticks:
                     data.append(stick.Parse()+'\n')
 
-                file.writelines(data)
+                data.append('=\n')
 
+                data.append(str(gravity) + "," + str(numIterations))
+                
+                file.writelines(data)
                 file.close()
                 statusText = "Ready"
             canClick = True
 
 def LoadFromFile(event=None):
-    global points, sticks, simNow, pauseSim, statusText, canClick
+    global points, sticks, simNow, pauseSim, statusText, canClick, gravity, numIterations
 
     if canClick:
         simNow = False
         pauseSim = False
         canClick = False
 
-        Clear()
+        Clear(True)
 
         path = os.getcwd()+'/Maps/'
         if not os.path.exists(path):
@@ -539,6 +542,10 @@ def LoadFromFile(event=None):
                     Stick(points[int(stickData[0])], points[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
                 statusText = "Loading " + str(stickList.index(stickDataChunk)+len(pointList)) + "/" + str(total)
                 Render()
+
+            settings = segments[2].split(',')
+            gravity = float(settings[0])
+            numIterations = int(settings[1])
 
             canClick = True
             statusText = "Ready"
@@ -813,13 +820,14 @@ menubar.add_cascade(label="Edit", menu=editmenu)
 
 simmenu = tk.Menu(menubar, tearoff=0)
 simmenu.add_command(label="Start/Stop Simulation", command=SpaceHandler)
-simmenu.add_command(label="Parameters", command=SimParamsWindow)
 menubar.add_cascade(label="Simulation", menu=simmenu)
 
-toolsmenu = tk.Menu(menubar, tearoff=0)
-toolsmenu.add_command(label="Grid Parameters", command=GridParamsWindow)
-toolsmenu.add_command(label="Toggle Window Collision", command=ToggleWindowCollision)
-menubar.add_cascade(label="Tools", menu=toolsmenu)
+settingsmenu = tk.Menu(menubar, tearoff=0)
+settingsmenu.add_command(label="Simulation Parameters", command=SimParamsWindow)
+settingsmenu.add_command(label="Grid Parameters", command=GridParamsWindow)
+settingsmenu.add_separator()
+settingsmenu.add_command(label="Toggle Window Collision", command=ToggleWindowCollision)
+menubar.add_cascade(label="Settings", menu=settingsmenu)
 
 helpmenu = tk.Menu(menubar, tearoff=0)
 helpmenu.add_command(label="Controls", command=ControlsWindow)
