@@ -21,7 +21,7 @@ This is a Tkinter based cloth/rope simulator in python. This is more of an exper
 - Show % in status bar for loading
 - Better and more comments in the code
 - Colour scheme, etc for visual aesthetic
-
+- New Stick and Point types (slider, motor, etc)
 ------------
 
 
