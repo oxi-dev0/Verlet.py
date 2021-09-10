@@ -4,28 +4,27 @@ This is a Tkinter based cloth/rope simulator in python. This is more of an exper
 ------------
 
 
-### Controls
-- Click in empty space - Spawn Point
-- Right click and drag off of one point onto another - Join Points
-- Enter while hovering over point - Lock Point
-- Delete - Delete closest Point
-- G - Spawn grid
-- Space - Start/Stop Simulation
+### Instructions
+Make sure you have tkinter installed into python, then run sim.py with python 3.xx. A window should appear with a welcome message in front of it.
+Read the controls then feel free to open one of the example maps.
 
 ------------
 
 
 
 ### Future
-- Proper GUI
+- Show % in status bar for loading
+- Better and more comments in the code
 - Colour scheme, etc for visual aesthetic
-
+- New Stick and Point types (slider, motor, etc)
+- Camera control (zooming + movement)
+- More example maps
 ------------
 
 
 ### Issues (In order of importance)
+- Looks Ugly
+- Not clear on how to use
 - Rendering Performance
 - Simulation Performance
-- Not clear on how to use
 - Dodgy cleanup/reset code
-- Looks Ugly
