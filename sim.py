@@ -45,6 +45,7 @@ gridX=8
 gridY=8
 windowCollide = True
 currentFile = ""
+simColour = True
 # ------------[DATA]------------
 
 # ------------[GUI DATA]------------
@@ -91,6 +92,8 @@ def Length2D(vect):
 
 def Normalize2D(vect):
     length = Length2D(vect)
+    if length == 0:
+        return [0, 0]
     return [vect[0]/length, vect[1]/length]
 # ------------[VECTOR MATH FUNCTIONS]------------
 
@@ -152,18 +155,21 @@ class Stick:
         self.pointA.references.append(self)
         self.pointB.references.append(self)
         self.length = tlength
-
-        colour = "black"
-        if tbackground:
-            colour = "gray89"
-
         self.background = tbackground
+
+        colour = self.CalcColour()
 
         if render:
             self.renderObject = canvas.create_line(self.pointA.position[0], self.pointA.position[1], self.pointB.position[0], self.pointB.position[1], width=stickThickness, fill=colour)
             canvas.tag_lower(self.renderObject)
 
         sticks.append(self)
+
+    def CalcColour(self):
+        colour = "black"
+        if self.background:
+            colour = "gray89"
+        return colour
 
     def Remove(self):
         global canvas, sticks
@@ -184,12 +190,51 @@ class Stick:
             txt += str(data) + ","
         return txt[:-1]
 
+    def Simulate(self):
+        # Calculate stick data
+        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
+        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+        
+        if not self.pointA.locked:
+            # Push point A to be restrained by stick length
+            self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+        if not self.pointB.locked:
+            # Push point B to be restrained by stick length
+            self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+
+class RopeStick(Stick):
+    def CalcColour(self):
+        if Distance2D(self.pointA.position, self.pointB.position) > self.length and simColour:
+            return "Blue"
+        else:
+            return "Purple"
+    
+    def Simulate(self):
+        global canvas
+        
+        # Calculate stick data
+        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
+        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+
+        if hasattr(self, 'renderObject'):
+            canvas.itemconfig(self.renderObject, fill=self.CalcColour())
+
+        currentLength = Distance2D(self.pointA.position, self.pointB.position)
+        if currentLength > self.length:   
+            if not self.pointA.locked:
+                # Push point A to be restrained by stick length
+                self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+            if not self.pointB.locked:
+                # Push point B to be restrained by stick length
+                self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+
 class StandInStick():
-    def __init__(self, tpointA, tpointB, tlength, tbackground):
+    def __init__(self, tpointA, tpointB, tlength, tbackground, ttype):
         self.pointA = tpointA
         self.pointB = tpointB
         self.length = tlength
         self.background = tbackground
+        self.stickType = ttype
 
 class TempStick:
     def __init__(self, tpointA, mousePos, tbackground):
@@ -280,6 +325,12 @@ def CalculateMainCenter(width, height):
 def ToggleWindowCollision():
     global windowCollide
     windowCollide = not windowCollide
+
+def StickType(stick):
+    typ = 0
+    if stick.__class__.__name__ == 'RopeStick':
+        typ = 1
+    return typ
     
 # ------------[UTIL FUNCTIONS]------------
 
@@ -321,7 +372,7 @@ def Mouse1UpHandler(event):
     heldPoint = 0
     leftMouseDown = False
 
-def Mouse2DownHandler(event, shift=False):
+def Mouse2DownHandler(event, shift=False, ctrl=False):
     global rightMouseDown, window, prevPoint, shiftHeld, canClick
 
     if not rightMouseDown and canClick:
@@ -332,7 +383,7 @@ def Mouse2DownHandler(event, shift=False):
         
     rightMouseDown = True
 
-def Mouse2UpHandler(event, shift=False):
+def Mouse2UpHandler(event, shift=False, ctrl=False):
     global rightMouseDown, currentTempStick, shiftHeld, canClick
     
     if canClick:
@@ -340,7 +391,12 @@ def Mouse2UpHandler(event, shift=False):
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPoint([mouseX, mouseY])
         if not closest == currentTempStick.pointA:
-            newStick = Stick(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
+            stickClass = None
+            if ctrl:
+                stickClass = RopeStick
+            else:
+                stickClass = Stick
+            newStick = stickClass(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
 
     currentTempStick.Cleanup()
         
@@ -351,6 +407,12 @@ def ShiftDownHandler(event):
 
 def ShiftUpHandler(event):
     Mouse2UpHandler(event, True)
+
+def ControlDownHandler(event):
+    Mouse2DownHandler(event, False, True)
+
+def ControlUpHandler(event):
+    Mouse2UpHandler(event, False, True)
 
 # ----[SIMULATION RESET]----
 def SpaceHandler(event=None):
@@ -375,7 +437,8 @@ def SpaceHandler(event=None):
             
             stickIndex = 0
             while stickIndex < len(sticks):
-                sticksBeforeSim.append(StandInStick(points.index(sticks[stickIndex].pointA), points.index(sticks[stickIndex].pointB), sticks[stickIndex].length, sticks[stickIndex].background))
+                stickType = StickType(sticks[stickIndex])
+                sticksBeforeSim.append(StandInStick(points.index(sticks[stickIndex].pointA), points.index(sticks[stickIndex].pointB), sticks[stickIndex].length, sticks[stickIndex].background, stickType))
                 stickIndex += 1
         else:
             canClick = False
@@ -411,7 +474,14 @@ def SpaceHandler(event=None):
             
             stickBeforeIndex = 0
             while stickBeforeIndex < len(sticksBeforeSim):
-                Stick(points[sticksBeforeSim[stickBeforeIndex].pointA], points[sticksBeforeSim[stickBeforeIndex].pointB], sticksBeforeSim[stickBeforeIndex].length, sticksBeforeSim[stickBeforeIndex].background)
+                stickClass = None
+                stickType = sticksBeforeSim[stickBeforeIndex].stickType
+                if stickType == 0:
+                    stickClass = Stick
+                elif stickType == 1:
+                    stickClass = RopeStick
+                    
+                stickClass(points[sticksBeforeSim[stickBeforeIndex].pointA], points[sticksBeforeSim[stickBeforeIndex].pointB], sticksBeforeSim[stickBeforeIndex].length, sticksBeforeSim[stickBeforeIndex].background)
                 stickBeforeIndex += 1
                 statusText = "Restoring " + str(stickBeforeIndex + len(pointsBeforeSim)) + "/" + str(len(sticksBeforeSim) + len(pointsBeforeSim))
                 Render()
@@ -521,6 +591,9 @@ def CloseSave(contin=False, prompt=False):
                 else:
                     window.destroy()
                     exit()
+            else:
+                window.destroy()
+                exit()
         else:
             window.destroy()
             exit()
@@ -559,7 +632,7 @@ def SaveToFile(event=None, useCurrent=True, returnFunc=None):
                 data.append('=\n')
 
                 for stick in sticks:
-                    data.append(stick.Parse()+'\n')
+                    data.append(stick.Parse()+ ',' + str(StickType(stick)) + '\n')
                     statusText = "Saving " + str(sticks.index(stick) + len(points)) + "/" + str(len(points) + len(sticks))
                     Render()
 
@@ -614,8 +687,13 @@ def LoadFromFile(event=None):
             for stickDataChunk in stickList:
                 stickData = stickDataChunk.split(',')
                 #print(stickData)
-                if len(stickData) == 4:
-                    Stick(points[int(stickData[0])], points[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
+                if len(stickData) == 5:
+                    stickClass = None
+                    if stickData[4] == "0":
+                        stickClass = Stick
+                    elif stickData[4] == "1":
+                        stickClass = RopeStick
+                    stickClass(points[int(stickData[0])], points[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
                 statusText = "Loading " + str(stickList.index(stickDataChunk)+len(pointList)) + "/" + str(total)
                 Render()
 
@@ -640,6 +718,8 @@ window.bind("g", GridSpawnHandler)
 window.bind("p", PauseHandler)
 window.bind("<Shift-ButtonPress-3>", ShiftDownHandler)
 window.bind("<Shift-ButtonRelease-3>", ShiftUpHandler)
+window.bind("<Control-ButtonPress-3>", ControlDownHandler)
+window.bind("<Control-ButtonRelease-3>", ControlUpHandler)
 window.bind("<Control-s>", SaveToFile)
 window.bind("<Control-Shift-s>", SaveToFileNoCurrent)
 window.bind("<Control-o>", LoadFromFile)
@@ -676,20 +756,8 @@ def Simulate():
 
     # Run through iterations to get physics to settle
     for i in range(numIterations):
-        
         for stick in sticks:
-
-            # Calculate stick data
-            stickCenter = Divide2DByFloat(Add2D(stick.pointA.position, stick.pointB.position), 2)
-            stickDir = Normalize2D(Subtract2D(stick.pointA.position, stick.pointB.position))
-            
-            if not stick.pointA.locked:
-                # Push point A to be restrained by stick length
-                stick.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, stick.length/2))
-            if not stick.pointB.locked:
-                # Push point B to be restrained by stick length
-                stick.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, stick.length/2))
-                
+            stick.Simulate()
 # ------------[SIMULATION]------------
 
 # ------------[INTERACT]------------
