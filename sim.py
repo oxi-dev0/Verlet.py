@@ -237,13 +237,15 @@ class StandInStick():
         self.stickType = ttype
 
 class TempStick:
-    def __init__(self, tpointA, mousePos, tbackground):
+    def __init__(self, tpointA, mousePos, tbackground, ttype):
         global canvas, sticks, currentTempStick, stickThickness
         self.pointA = tpointA
 
         colour = "black"
         if tbackground:
             colour = "gray89"
+        if ttype == 1:
+            colour = "purple"
             
         self.background = tbackground
         self.renderObject = canvas.create_line(self.pointA.position[0], self.pointA.position[1], mousePos[0], mousePos[1], width=stickThickness, fill=colour)
@@ -375,11 +377,15 @@ def Mouse1UpHandler(event):
 def Mouse2DownHandler(event, shift=False, ctrl=False):
     global rightMouseDown, window, prevPoint, shiftHeld, canClick
 
+    stickType = 0
+    if ctrl:
+        stickType = 1
+
     if not rightMouseDown and canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPoint([mouseX, mouseY])
-        TempStick(closest, [mouseX, mouseY], shift)
+        TempStick(closest, [mouseX, mouseY], shift, stickType)
         
     rightMouseDown = True
 
