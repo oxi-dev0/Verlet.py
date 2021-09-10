@@ -44,6 +44,7 @@ canClick = False
 gridX=8
 gridY=8
 windowCollide = True
+currentFile = ""
 # ------------[DATA]------------
 
 # ------------[GUI DATA]------------
@@ -54,6 +55,8 @@ gridy=0
 simparampopup=0
 gridparampopup=0
 controlsPopup=0
+savepromptpopup=0
+savepromptreturn=None
 menubar=0
 # ------------[GUI DATA]------------
 
@@ -470,31 +473,95 @@ def PauseHandler(event):
                 statusText = "Paused"
             else:
                 statusText = "Simulating"
+
+def NewFile(contin=False, prompt=False):
+    global currentFile, gravity, numIterations, points
+    if not currentFile == "":
+        if not contin:
+            if prompt:
+                SavePrompt(NewFile)
+        else:
+            Clear()
+            currentFile = ""
+            gravity = 0.004
+            numIterations = 2
+    else:
+        if len(points) > 0:
+            if not contin:
+                if prompt:
+                    SavePrompt(NewFile)
+                else:
+                    Clear()
+                    currentFile = ""
+                    gravity = 0.004
+                    numIterations = 2
+        else:
+            Clear()
+            currentFile = ""
+            gravity = 0.004
+            numIterations = 2
+            
+def NewFileInst():
+    NewFile(False, True)
+
+def CloseSave(contin=False, prompt=False):
+    global currentFile, window
+    if not currentFile == "":
+        if not contin:
+            if prompt:
+                SavePrompt(CloseSave)
+        else:
+            window.destroy()
+            exit()
+    else:
+        if len(points) > 0:
+            if not contin:
+                if prompt:
+                    SavePrompt(CloseSave)
+                else:
+                    window.destroy()
+                    exit()
+        else:
+            window.destroy()
+            exit()
+            
+def CloseSaveInst():
+    CloseSave(False, True)
     
 # ------------[INPUT HANDLERS]------------
 
 # ------------[LOADING]------------
-def SaveToFile(event=None):
-    global simNow, points, sticks, statusText, canClick, gravity, numIterations
+def SaveToFile(event=None, useCurrent=True, returnFunc=None):
+    global simNow, points, sticks, statusText, canClick, gravity, numIterations, currentFile
     
-    if canClick: 
+    if canClick or returnFunc: 
         if not simNow:
             canClick = False
             path = os.getcwd()+'/Maps/'
             if not os.path.exists(path):
                 os.mkdir(path)
-            file = tk.filedialog.asksaveasfile(mode="w", filetypes=[('phys', '*.phys')], defaultextension=[('*.phys')], initialdir=path)
+            
+            file = None
+            if currentFile == "" or not useCurrent:
+                file = tk.filedialog.asksaveasfile(mode="w", filetypes=[('phys', '*.phys')], defaultextension=[('*.phys')], initialdir=path)
+            else:
+                file = open(currentFile, 'w')
 
             if file:
+                currentFile = file.name
                 statusText = "Saving"
                 data = []
                 for point in points:
                     data.append(point.Parse()+'\n')
+                    statusText = "Saving " + str(points.index(point)) + "/" + str(len(points) + len(sticks))
+                    Render()
 
                 data.append('=\n')
 
                 for stick in sticks:
                     data.append(stick.Parse()+'\n')
+                    statusText = "Saving " + str(sticks.index(stick) + len(points)) + "/" + str(len(points) + len(sticks))
+                    Render()
 
                 data.append('=\n')
 
@@ -502,11 +569,19 @@ def SaveToFile(event=None):
                 
                 file.writelines(data)
                 file.close()
+                
                 statusText = "Ready"
+
+                if returnFunc:
+                    returnFunc()
+                    
             canClick = True
 
+def SaveToFileNoCurrent():
+    SaveToFile(None, False)
+
 def LoadFromFile(event=None):
-    global points, sticks, simNow, pauseSim, statusText, canClick, gravity, numIterations
+    global points, sticks, simNow, pauseSim, statusText, canClick, gravity, numIterations, currentFile
 
     if canClick:
         simNow = False
@@ -521,6 +596,7 @@ def LoadFromFile(event=None):
         file = tk.filedialog.askopenfile(mode="r", filetypes=[('phys', '*.phys')], defaultextension=[('*.phys')], initialdir=path)
         if file:
             statusText = "Loading"
+            currentFile = file.name
             
             data = file.read()
             segments = data.split('=')
@@ -565,7 +641,9 @@ window.bind("p", PauseHandler)
 window.bind("<Shift-ButtonPress-3>", ShiftDownHandler)
 window.bind("<Shift-ButtonRelease-3>", ShiftUpHandler)
 window.bind("<Control-s>", SaveToFile)
+window.bind("<Control-Shift-s>", SaveToFileNoCurrent)
 window.bind("<Control-o>", LoadFromFile)
+window.bind("<Control-n>", NewFileInst)
 # ------------[BINDS]------------
 
 # ------------[SIMULATION]------------
@@ -632,7 +710,7 @@ def Interact():
     
 # ------------[RENDER]------------
 def Render():
-    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText
+    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile
 
     # Update each point and stick's location
 
@@ -656,12 +734,18 @@ def Render():
     # Update FPS Counter
     canvas.itemconfigure(fpsText, text=str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)))
 
+    # Update Title Bar
+    title = "TKinter Physics Sim - V1"
+    if not currentFile == "":
+        title += " - " + currentFile
+    window.title(title)
+
     # Draw
     window.update()
     
 # ------------[RENDER]------------
 
-# ------------[POPUP FUNCTIONS]------------
+# ------------[GUI FUNCTIONS]------------
 def SimParamsEnter():
     global grav, iters, gravity, numIterations, simparampopup, canClick
     
@@ -695,10 +779,62 @@ def SimParamsNumItersDefault():
 def ControlsLoseFocus(event):
     global controlsPopup
     controlsPopup.focus_force()
+
+def SavePromptSave():
+    global savepromptreturn
+    SaveToFile(None, True, SavePromptSaveFinished)
     
-# ------------[POPUP FUNCTIONS]------------
+def SavePromptSaveFinished():
+    global savepromptreturn
+    SavePrompt(savepromptreturn, True, True)
+    
+def SavePromptNoSave():
+    global savepromptreturn
+    SavePrompt(savepromptreturn, True, True)
+
+def SavePromptCancel():
+    global savepromptreturn
+    SavePrompt(savepromptreturn, True, False)
+    
+# ------------[GUI FUNCTIONS]------------
 
 # ------------[POPUPS]------------
+def SavePrompt(returnFunc, returnNow=False, contin=False):
+    global savepromptreturn, savepromptpopup, canClick
+    savepromptreturn = returnFunc
+    
+    if not returnNow:
+        canClick = False
+        global window
+        savepromptpopup = tk.Tk()
+        savepromptpopup.resizable(False, False)
+        #savepromptpopup.overrideredirect(True)
+        
+        width=250
+        height=100
+        center = CalculateMainCenter(width, height)
+    
+        savepromptpopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
+        savepromptpopup.wm_title("Alert")
+
+        label = ttk.Label(savepromptpopup, text="You will lose your work if you dont save!")
+        label.pack(side="top", expand=True, fill="none", pady=15)
+
+        save = ttk.Button(savepromptpopup, text="Save", command=SavePromptSave)
+        save.pack(side="left", expand=True, fill="none", pady=(0, 5))
+
+        dontsave = ttk.Button(savepromptpopup, text="Don't Save", command=SavePromptNoSave)
+        dontsave.pack(side="left", expand=True, fill="none", pady=(0, 5))
+
+        cancel = ttk.Button(savepromptpopup, text="Cancel", command=SavePromptCancel)
+        cancel.pack(side="left", expand=True, fill="none", pady=(0, 5))
+
+        savepromptpopup.protocol('WM_DELETE_WINDOW', SavePromptCancel)
+    else:
+        canClick = True
+        savepromptpopup.destroy()
+        returnFunc(contin)
+
 def InfoWindow():
     global window
     popup = tk.Tk()
@@ -808,8 +944,12 @@ def ControlsWindow():
 # ------------[GUI MENUBAR]------------
 menubar = tk.Menu(window)
 filemenu = tk.Menu(menubar, tearoff=0)
+filemenu.add_command(label="New", command=NewFileInst)
+filemenu.add_separator()
 filemenu.add_command(label="Open", command=LoadFromFile)
+filemenu.add_separator()
 filemenu.add_command(label="Save", command=SaveToFile)
+filemenu.add_command(label="Save As..", command=SaveToFileNoCurrent)
 filemenu.add_separator()
 filemenu.add_command(label="Exit", command=window.destroy)
 menubar.add_cascade(label="File", menu=filemenu)
@@ -844,6 +984,8 @@ fpsText = canvas.create_text(20, 15, fill="black", text="0")
 Render()
 
 ControlsWindow()
+
+window.protocol('WM_DELETE_WINDOW', CloseSaveInst)
 
 # MAIN LOOP
 while True:
