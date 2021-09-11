@@ -13,7 +13,8 @@ Read the controls then feel free to open one of the example maps.
 
 
 ### Future
-- Show % in status bar for loading
+- More demo maps
+- UI for selecting stick types, load maps, etc
 - Better and more comments in the code
 - Colour scheme, etc for visual aesthetic
 - New Stick and Point types (slider, motor, etc)
