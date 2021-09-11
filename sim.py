@@ -10,10 +10,10 @@ import os
 
 window = tk.Tk()
 window.title("TKinter Physics Sim - V1")
-window.geometry("1000x1000")
+window.geometry("1920x1080")
 
-canvas = tk.Canvas(window, width=1000, height=975)
-canvas.pack()
+canvas = tk.Canvas(window, width=1000, height=1000)
+canvas.pack(fill="both", expand=True)
 
 # ------------[SETTINGS]------------
 # Physics
@@ -181,11 +181,11 @@ class Point(object):
 
             # Window Collision
             if windowCollide:
-                self.position[0] = Clamp(self.position[0], 10, 990)
+                self.position[0] = Clamp(self.position[0], 10, window.winfo_width()-10)
 
-                if self.position[1] > 970:
+                if self.position[1] > window.winfo_height()-30:
                     self.position = Subtract2D(self.position, Divide2DByFloat(posdelta, 3))
-                self.position[1] = Clamp(self.position[1], 10, 970)
+                self.position[1] = Clamp(self.position[1], 10, window.winfo_height()-30)
             
             self.previousPosition = posBefore
 
