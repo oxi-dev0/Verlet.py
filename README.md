@@ -23,8 +23,8 @@ Read the controls then feel free to open one of the example maps.
 
 
 ### Issues (In order of importance)
-- Looks Ugly
 - Not clear on how to use
+- Not full commenting
 - Rendering Performance
 - Simulation Performance
 - Dodgy cleanup/reset code
