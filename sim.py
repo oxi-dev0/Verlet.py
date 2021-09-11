@@ -17,8 +17,8 @@ canvas.pack()
 
 # ------------[SETTINGS]------------
 # Physics
-gravity = 0.004 # DEFAULT: 0.002
-numIterations = 1 # "Stiffness" (Will impact performance)
+gravity = 0.004
+numIterations = 2
 
 # Display
 circleRadius = 5
@@ -63,8 +63,10 @@ menubar=0
 
 # ------------[STORAGE]------------
 pointsBeforeSim = []
+objectPointsBeforeSim = []
 sticksBeforeSim = []
 points = []
+objectPoints = []
 sticks = []
 # ------------[STORAGE]------------
 
@@ -81,6 +83,9 @@ def Subtract2D(pos1, pos2):
 def Divide2D(pos1, pos2):
     return [pos1[0]/pos2[0], pos1[1]/pos2[1]]
 
+def Multiply2D(pos1, pos2):
+    return [pos1[0]*pos2[0], pos1[1]*pos2[1]]
+
 def Divide2DByFloat(vect, flt):
     return [vect[0]/flt, vect[1]/flt]
 
@@ -95,16 +100,27 @@ def Normalize2D(vect):
     if length == 0:
         return [0, 0]
     return [vect[0]/length, vect[1]/length]
+
+def DotProduct2D(a, b):
+    return a[0] * b[0] + a[1] * b[1]
+
+def Project2D(a, b):
+    normB = Normalize2D(b)
+    return Multiply2DByFloat(normB, DotProduct2D(a, normB))
+
+def ParseInt2D(a):
+    return [int(a[0]), int(a[1])]
 # ------------[VECTOR MATH FUNCTIONS]------------
 
 # ------------[CLASSES]------------
 class Point(object):
-    def __init__(self, pos, tlocked, render=True, join=True):
+    def __init__(self, pos, tlocked, render=True, join=True, tsave=True):
         global canvas, circleRadius, points
         self.position = pos
         self.previousPosition = pos
         self.locked = tlocked
         self.references = []
+        self.save = tsave
 
         colour = "black"
         if tlocked:
@@ -147,23 +163,105 @@ class Point(object):
             txt += str(data)+ ","
         return txt[:-1]
 
+    def Simulate(self):
+        global gravity, windowCollide
+        
+        if not self.locked:
+            posBefore = self.position
+
+            # Keep velocity from last update
+            posdelta = Subtract2D(self.position, self.previousPosition)
+            self.position = Add2D(self.position, posdelta)
+            
+            # Calculate frame delta time
+            delta = (time.time()*1000)-lastFrameTime
+
+            # Simulate Gravity based upon frame time
+            self.position[1] += gravity * delta * delta
+
+            # Window Collision
+            if windowCollide:
+                self.position[0] = Clamp(self.position[0], 10, 990)
+
+                if self.position[1] > 970:
+                    self.position = Subtract2D(self.position, Divide2DByFloat(posdelta, 3))
+                self.position[1] = Clamp(self.position[1], 10, 970)
+            
+            self.previousPosition = posBefore
+
+class ObjectPoint(Point):
+    def __init__(self, pos, tlocked, render=True, join=True, tsave=True, towner=None, tnewSpawned=False):
+        global canvas, circleRadius, points
+        self.position = pos
+        self.previousPosition = pos
+        self.locked = tlocked
+        self.references = []
+        self.owner = towner
+        self.save = tsave
+        self.newlySpawned=tnewSpawned
+
+        colour = "red"
+
+        if render:
+            self.renderObject = canvas.create_oval(pos[0]-circleRadius, pos[1]-circleRadius, pos[0]+circleRadius, pos[1]+circleRadius, fill=colour)
+            canvas.tag_raise(self.renderObject)
+            if join:
+                objectPoints.append(self)
+
+    def Remove(self, skipRefs=False):
+        global canvas, objectPoints
+
+        if hasattr(self, 'renderObject'):
+            canvas.delete(self.renderObject)
+
+        if not skipRefs:
+            refIndex = 0
+            referencesCopy = self.references.copy()
+            while refIndex < len(referencesCopy):
+                referencesCopy[refIndex].Remove()
+                refIndex+=1
+
+        if not skipRefs:
+            if hasattr(self, 'owner'):
+                if self.owner:
+                    self.owner.Remove()
+
+        if self in objectPoints:
+            objectPoints.remove(self)
+
+    def Parse(self):
+        global sticks
+        txt = ""
+        dataCache = [self.position[0], self.position[1], int(self.locked), sticks.index(self.owner)]
+        for data in dataCache:
+            txt += str(data)+ ","
+        return txt[:-1]
+
 class Stick:
-    def __init__(self, tpointA, tpointB, tlength, tbackground, render=True):
+    def __init__(self, tpointA, tpointB, tlength, tbackground, render=True, standin=False, tsave=True, tstickType=0):
         global canvas, sticks, stickThickness
         self.pointA = tpointA
         self.pointB = tpointB
-        self.pointA.references.append(self)
-        self.pointB.references.append(self)
+
+        self.save = tsave
+
+        self.stickType = tstickType
+
+        if not standin:
+            self.pointA.references.append(self)
+            self.pointB.references.append(self)
+            
         self.length = tlength
         self.background = tbackground
 
         colour = self.CalcColour()
 
-        if render:
-            self.renderObject = canvas.create_line(self.pointA.position[0], self.pointA.position[1], self.pointB.position[0], self.pointB.position[1], width=stickThickness, fill=colour)
-            canvas.tag_lower(self.renderObject)
+        if not standin:
+            if render:
+                self.renderObject = canvas.create_line(self.pointA.position[0], self.pointA.position[1], self.pointB.position[0], self.pointB.position[1], width=stickThickness, fill=colour)
+                canvas.tag_lower(self.renderObject)
 
-        sticks.append(self)
+            sticks.append(self)
 
     def CalcColour(self):
         colour = "black"
@@ -180,12 +278,13 @@ class Stick:
             self.pointA.references.remove(self)
         if self in self.pointB.references:
             self.pointB.references.remove(self)
-        sticks.remove(self)
+        if self in sticks:
+            sticks.remove(self)
 
     def Parse(self):
-        global points
+        global points, objectPoints
         txt = ""
-        dataCache = [points.index(self.pointA), points.index(self.pointB), self.length, int(self.background)]
+        dataCache = [(points+objectPoints).index(self.pointA), (points+objectPoints).index(self.pointB), self.length, int(self.background)]
         for data in dataCache:
             txt += str(data) + ","
         return txt[:-1]
@@ -228,13 +327,75 @@ class RopeStick(Stick):
                 # Push point B to be restrained by stick length
                 self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
 
-class StandInStick():
-    def __init__(self, tpointA, tpointB, tlength, tbackground, ttype):
+class SlideStick(Stick):
+    def __init__(self, tpointA, tpointB, tlength, tbackground, render=True):
+        global canvas, sticks, stickThickness
+        
+        self.middlePoint = ObjectPoint(ParseInt2D(Divide2DByFloat(Add2D(tpointA.position, tpointB.position), 2)), False, True, True, True)
+        self.stick1 = RopeStick(tpointA, self.middlePoint, tlength, False, True, False, False)
+        self.stick2 = RopeStick(tpointB, self.middlePoint, tlength, False, True, False, False)
+
+        self.save = True
+
         self.pointA = tpointA
         self.pointB = tpointB
         self.length = tlength
         self.background = tbackground
-        self.stickType = ttype
+
+        self.middlePoint.owner = self
+
+        self.pointA.references.append(self)
+        self.pointB.references.append(self)
+        self.middlePoint.references.append(self)
+        
+        sticks.append(self)
+
+    def Simulate(self):
+        newDist = Distance2D(self.pointA.position, self.pointB.position)
+        self.stick1.length = newDist-10
+        self.stick2.length = newDist-10
+        
+        self.stick1.Simulate()
+        self.stick2.Simulate()
+
+        middlePointVect = Subtract2D(self.middlePoint.position, self.pointA.position)
+        stickVect = Subtract2D(self.pointA.position, self.pointB.position)
+
+        # Project
+        projected = Project2D(middlePointVect, stickVect)
+
+        # middlePoint = pointA + projected
+        self.middlePoint.position = Add2D(self.pointA.position, projected)
+
+    def Remove(self):
+        global canvas, sticks
+        
+        if hasattr(self, 'renderObject'):
+            canvas.delete(self.renderObject)
+        if self in self.pointA.references:
+            self.pointA.references.remove(self)
+        if self in self.pointB.references:
+            self.pointB.references.remove(self)
+        if self in self.middlePoint.references:
+            self.middlePoint.references.remove(self)
+        self.middlePoint.owner = None
+        self.stick1.Remove()
+        self.stick2.Remove()
+        sticks.remove(self)
+
+    def ChangeMiddlePoint(self, point):
+        oldPoint = self.middlePoint
+        self.middlePoint = point
+        self.stick1.pointB = point
+        self.stick2.pointB = point
+        point.owner = self
+        if self in oldPoint.references:
+            oldPoint.references.remove(self)
+        oldPoint.owner = None
+        oldPoint.Remove(True)
+
+    def CalcMiddlePoint(self):
+        self.middlePoint.position = ParseInt2D(Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2))
 
 class TempStick:
     def __init__(self, tpointA, mousePos, tbackground, ttype):
@@ -260,7 +421,7 @@ class TempStick:
 
 # ------------[UTIL FUNCTIONS]------------
 def GetClosestPoint(pos):
-    global points
+    global points, objectPoints
     
     closest = 0
     closestDist = 1000000
@@ -268,15 +429,23 @@ def GetClosestPoint(pos):
         if Distance2D(pos, point.position) < closestDist:
             closest = point
             closestDist = Distance2D(pos, point.position)
+    for point in objectPoints:
+        if Distance2D(pos, point.position) < closestDist:
+            closest = point
+            closestDist = Distance2D(pos, point.position)
 
     return closest
 
 def GetClosestPointThreshold(pos, thresh):
-    global points
+    global points, objectPoints
     
     closest = 0
     closestDist = 1000000
     for point in points:
+        if Distance2D(pos, point.position) < closestDist and Distance2D(pos, point.position) < thresh:
+            closest = point
+            closestDist = Distance2D(pos, point.position)
+    for point in objectPoints:
         if Distance2D(pos, point.position) < closestDist and Distance2D(pos, point.position) < thresh:
             closest = point
             closestDist = Distance2D(pos, point.position)
@@ -297,7 +466,11 @@ def Clear(overrideClick=False):
         for point in points:
             canvas.delete(point.renderObject)
 
+        for point in objectPoints:
+            canvas.delete(point.renderObject)
+
         points.clear()
+        objectPoints.clear()
 
         for stick in sticks:
                 stick.Remove()
@@ -305,7 +478,8 @@ def Clear(overrideClick=False):
         sleep(0.1)
 
         for stick in sticks:
-            canvas.delete(stick.renderObject)
+            if hasattr(stick, 'renderObject'):
+                canvas.delete(stick.renderObject)
 
         sticks.clear()
         statusText = "Ready"
@@ -332,7 +506,33 @@ def StickType(stick):
     typ = 0
     if stick.__class__.__name__ == 'RopeStick':
         typ = 1
+    if stick.__class__.__name__ == 'SlideStick':
+        typ = 2
     return typ
+
+def StickTypeClass(classNum):
+    stickClass = None
+    if classNum == 0:
+        stickClass = Stick
+    elif classNum == 1:
+        stickClass = RopeStick
+    elif classNum == 2:
+        stickClass = SlideStick
+    return stickClass
+
+def PointType(point):
+    typ = 0
+    if point.__class__.__name__ == 'ObjectPoint':
+        typ = 1
+    return typ
+
+def PointTypeClass(classNum):
+    pointClass = None
+    if classNum == 0:
+        pointClass = Point
+    elif classNum == 1:
+        pointClass = ObjectPoint
+    return stickClass
     
 # ------------[UTIL FUNCTIONS]------------
 
@@ -361,6 +561,8 @@ def Mouse1UpHandler(event):
 
     if canClick:
         if simNow == False and not heldPoint == 0:
+            heldPoint.previousPosition = heldPoint.position
+            
             refIndex = 0
             referencesCopy = heldPoint.references.copy()
             while refIndex < len(referencesCopy):
@@ -399,7 +601,7 @@ def Mouse2UpHandler(event, shift=False, ctrl=False):
         if not closest == currentTempStick.pointA:
             stickClass = None
             if ctrl:
-                stickClass = RopeStick
+                stickClass = SlideStick
             else:
                 stickClass = Stick
             newStick = stickClass(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
@@ -426,7 +628,7 @@ def SpaceHandler(event=None):
 
     global canClick
     if canClick:
-        global simNow, pointsBeforeSim, points, sticksBeforeSim, sticks, canvas, pauseSim, statusText
+        global simNow, pointsBeforeSim, points, sticksBeforeSim, sticks, canvas, pauseSim, statusText, objectPointsBeforeSim, objectPoints
         simNow = not simNow
         pauseSim = False
         if simNow:
@@ -436,61 +638,70 @@ def SpaceHandler(event=None):
 
             pointIndex = 0
             while pointIndex < len(points):
-                pointsBeforeSim.append(Point(points[pointIndex].position, points[pointIndex].locked, False))
+                if points[pointIndex].save:
+                    pointsBeforeSim.append(Point(points[pointIndex].position, points[pointIndex].locked, False))
                 pointIndex +=1
 
             sticksBeforeSim.clear()
             
             stickIndex = 0
             while stickIndex < len(sticks):
-                stickType = StickType(sticks[stickIndex])
-                sticksBeforeSim.append(StandInStick(points.index(sticks[stickIndex].pointA), points.index(sticks[stickIndex].pointB), sticks[stickIndex].length, sticks[stickIndex].background, stickType))
+                if sticks[stickIndex].save:
+                    stickType = StickType(sticks[stickIndex])
+
+                    pointAIndex = (points+objectPoints).index(sticks[stickIndex].pointA)
+
+                    pointBIndex = (points+objectPoints).index(sticks[stickIndex].pointB)
+                    
+                    sticksBeforeSim.append(Stick(pointAIndex, pointBIndex, sticks[stickIndex].length, sticks[stickIndex].background, False, True, False, stickType))
                 stickIndex += 1
+
+            objectPointsBeforeSim.clear()
+
+            objectPointIndex = 0
+            while objectPointIndex < len(objectPoints):
+                if objectPoints[objectPointIndex].save:
+                    objectPoint = objectPoints[objectPointIndex]
+                    objectPointsBeforeSim.append(ObjectPoint(objectPoint.position, objectPoint.locked, False, False, False, sticks.index(objectPoint.owner)))
+                objectPointIndex += 1
+            
         else:
             canClick = False
             statusText = "Restoring"
             Render()
-            
-            for point in points:
-                point.Remove()
-
-            sleep(0.1)
-
-            for point in points:
-                canvas.delete(point.renderObject)
-
-            points.clear()
-
-            for stick in sticks:
-                stick.Remove()
-
-            sleep(0.1)
-
-            for stick in sticks:
-                canvas.delete(stick.renderObject)
-
-            sticks.clear()
-            
+            Clear(True)
+    
             pointBeforeIndex = 0
             while pointBeforeIndex < len(pointsBeforeSim):
                 points.append(Point(pointsBeforeSim[pointBeforeIndex].position, pointsBeforeSim[pointBeforeIndex].locked, True, False))
                 pointBeforeIndex += 1
                 statusText = "Restoring " + str(pointBeforeIndex) + "/" + str(len(pointsBeforeSim) + len(sticksBeforeSim))
                 Render()
+
+                            
+            objectPointBeforeIndex = 0
+            while objectPointBeforeIndex < len(objectPointsBeforeSim):
+                objectPoint = objectPointsBeforeSim[objectPointBeforeIndex]
+                newObjectPoint = ObjectPoint(objectPoint.position, objectPoint.locked, True, True, True, objectPoint.owner, True)
+                objectPointBeforeIndex += 1
+                statusText = "Restoring " + str(objectPointBeforeIndex + len(pointsBeforeSim)) + "/" + str(len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim))
+                Render()
             
             stickBeforeIndex = 0
             while stickBeforeIndex < len(sticksBeforeSim):
                 stickClass = None
                 stickType = sticksBeforeSim[stickBeforeIndex].stickType
-                if stickType == 0:
-                    stickClass = Stick
-                elif stickType == 1:
-                    stickClass = RopeStick
-                    
-                stickClass(points[sticksBeforeSim[stickBeforeIndex].pointA], points[sticksBeforeSim[stickBeforeIndex].pointB], sticksBeforeSim[stickBeforeIndex].length, sticksBeforeSim[stickBeforeIndex].background)
+                stickClass = StickTypeClass(stickType)
+                combined = points+objectPoints
+                stickClass(combined[sticksBeforeSim[stickBeforeIndex].pointA], combined[sticksBeforeSim[stickBeforeIndex].pointB], sticksBeforeSim[stickBeforeIndex].length, sticksBeforeSim[stickBeforeIndex].background)
                 stickBeforeIndex += 1
-                statusText = "Restoring " + str(stickBeforeIndex + len(pointsBeforeSim)) + "/" + str(len(sticksBeforeSim) + len(pointsBeforeSim))
+                statusText = "Restoring " + str(stickBeforeIndex + len(pointsBeforeSim) + len(objectPointsBeforeSim)) + "/" + str(len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim))
                 Render()
+                
+            for objectPoint in objectPoints:
+                if objectPoint.newlySpawned == True:
+                    sticks[objectPoint.owner].ChangeMiddlePoint(objectPoint)
+                    objectPoint.newlySpawned = False
 
             statusText = "Ready"
             canClick = True
@@ -631,16 +842,26 @@ def SaveToFile(event=None, useCurrent=True, returnFunc=None):
                 statusText = "Saving"
                 data = []
                 for point in points:
-                    data.append(point.Parse()+'\n')
-                    statusText = "Saving " + str(points.index(point)) + "/" + str(len(points) + len(sticks))
-                    Render()
+                    if point.save:
+                        data.append(point.Parse()+'\n')
+                        statusText = "Saving " + str(points.index(point)) + "/" + str(len(points) + len(sticks) + len(objectPoints))
+                        Render()
 
                 data.append('=\n')
 
                 for stick in sticks:
-                    data.append(stick.Parse()+ ',' + str(StickType(stick)) + '\n')
-                    statusText = "Saving " + str(sticks.index(stick) + len(points)) + "/" + str(len(points) + len(sticks))
-                    Render()
+                    if stick.save:
+                        data.append(stick.Parse()+ ',' + str(StickType(stick)) + '\n')
+                        statusText = "Saving " + str(sticks.index(stick) + len(points)) + "/" + str(len(points) + len(sticks) + len(objectPoints))
+                        Render()
+
+                data.append('=\n')
+
+                for objectPoint in objectPoints:
+                    if objectPoint.save:
+                        data.append(objectPoint.Parse() + '\n')
+                        statusText = "Saving " + str(objectPoints.index(objectPoint) + len(points) + len(sticks)) + "/" + str(len(points) + len(sticks) + len(objectPoints))
+                        Render()
 
                 data.append('=\n')
 
@@ -660,7 +881,7 @@ def SaveToFileNoCurrent():
     SaveToFile(None, False)
 
 def LoadFromFile(event=None):
-    global points, sticks, simNow, pauseSim, statusText, canClick, gravity, numIterations, currentFile
+    global points, sticks, simNow, pauseSim, statusText, canClick, gravity, numIterations, currentFile, objectPoints
 
     if canClick:
         simNow = False
@@ -681,7 +902,8 @@ def LoadFromFile(event=None):
             segments = data.split('=')
             pointList = segments[0].split('\n')
             stickList = segments[1].split('\n')
-            total = len(pointList) + len(stickList)
+            objectPointList = segments[2].split('\n')
+            total = len(pointList) + len(stickList) + len(objectPointList)
             for pointDataChunk in pointList:
                 pointData = pointDataChunk.split(',')
                 #print(pointData)
@@ -689,21 +911,30 @@ def LoadFromFile(event=None):
                     Point([int(pointData[0]), int(pointData[1])], bool(int(pointData[2])))
                 statusText = "Loading " + str(pointList.index(pointDataChunk)) + "/" + str(total)
                 Render()
+
+            for objectPointDataChunk in objectPointList:
+                objectPointData = objectPointDataChunk.split(',')
+                if len(objectPointData) >= 3:   
+                    ObjectPoint([int(objectPointData[0]), int(objectPointData[1])], bool(int(objectPointData[2])), True, True, True, int(objectPointData[3]), True)
+                statusText = "Loading " + str(objectPointList.index(objectPointDataChunk)+len(pointList)) + "/" + str(total)
+                Render()
                 
             for stickDataChunk in stickList:
                 stickData = stickDataChunk.split(',')
                 #print(stickData)
                 if len(stickData) == 5:
-                    stickClass = None
-                    if stickData[4] == "0":
-                        stickClass = Stick
-                    elif stickData[4] == "1":
-                        stickClass = RopeStick
-                    stickClass(points[int(stickData[0])], points[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
-                statusText = "Loading " + str(stickList.index(stickDataChunk)+len(pointList)) + "/" + str(total)
+                    stickClass = StickTypeClass(int(stickData[4]))
+                    combined = points+objectPoints
+                    stickClass(combined[int(stickData[0])], combined[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
+                statusText = "Loading " + str(stickList.index(stickDataChunk)+len(pointList)+len(objectPointList)) + "/" + str(total)
                 Render()
 
-            settings = segments[2].split(',')
+            for objectPoint in objectPoints:
+                if objectPoint.newlySpawned == True:
+                    sticks[objectPoint.owner].ChangeMiddlePoint(objectPoint)
+                    objectPoint.newlySpawned = False
+            
+            settings = segments[3].split(',')
             gravity = float(settings[0])
             numIterations = int(settings[1])
 
@@ -734,31 +965,13 @@ window.bind("<Control-n>", NewFileInst)
 
 # ------------[SIMULATION]------------
 def Simulate():
-    global points, lastFrameTime, numIterations, windowCollide
+    global points, objectPoints, sticks, lastFrameTime, numIterations, windowCollide
     
     for point in points:
-        if not point.locked:
-            posBefore = point.position
+        point.Simulate()
 
-            # Keep velocity from last update
-            posdelta = Subtract2D(point.position, point.previousPosition)
-            point.position = Add2D(point.position, posdelta)
-            
-            # Calculate frame delta time
-            delta = (time.time()*1000)-lastFrameTime
-
-            # Simulate Gravity based upon frame time
-            point.position[1] += gravity * delta * delta
-
-            # Window Collision
-            if windowCollide:
-                point.position[0] = Clamp(point.position[0], 10, 990)
-
-                if point.position[1] > 970:
-                    point.position = Subtract2D(point.position, Divide2DByFloat(posdelta, 3))
-                point.position[1] = Clamp(point.position[1], 10, 970)
-            
-            point.previousPosition = posBefore
+    for point in objectPoints:
+        point.Simulate()
 
     # Run through iterations to get physics to settle
     for i in range(numIterations):
@@ -774,6 +987,10 @@ def Interact():
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         heldPoint.position = [mouseX, mouseY]
+        if not simNow:
+            for ref in heldPoint.references:
+                if ref.__class__.__name__ == "SlideStick":
+                    ref.CalcMiddlePoint()
 
     if not grabPoint == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
@@ -784,7 +1001,7 @@ def Interact():
     
 # ------------[RENDER]------------
 def Render():
-    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile
+    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile, objectPoints, sticks
 
     # Update each point and stick's location
 
@@ -794,7 +1011,8 @@ def Render():
         
     for point in points:
         canvas.coords(point.renderObject, point.position[0]-circleRadius, point.position[1]-circleRadius, point.position[0]+circleRadius, point.position[1]+circleRadius)
-
+    for point in objectPoints:
+        canvas.coords(point.renderObject, point.position[0]-circleRadius, point.position[1]-circleRadius, point.position[0]+circleRadius, point.position[1]+circleRadius)
 
     # Update Statusbar
     statusBar['text'] = statusText
