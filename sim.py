@@ -675,7 +675,8 @@ def SpaceHandler(event=None):
             while pointBeforeIndex < len(pointsBeforeSim):
                 points.append(Point(pointsBeforeSim[pointBeforeIndex].position, pointsBeforeSim[pointBeforeIndex].locked, True, False))
                 pointBeforeIndex += 1
-                statusText = "Restoring " + str(pointBeforeIndex) + "/" + str(len(pointsBeforeSim) + len(sticksBeforeSim))
+                percent = ((pointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
+                statusText = "Restoring " + str(int(percent)) + "%"
                 Render()
 
                             
@@ -684,7 +685,8 @@ def SpaceHandler(event=None):
                 objectPoint = objectPointsBeforeSim[objectPointBeforeIndex]
                 newObjectPoint = ObjectPoint(objectPoint.position, objectPoint.locked, True, True, True, objectPoint.owner, True)
                 objectPointBeforeIndex += 1
-                statusText = "Restoring " + str(objectPointBeforeIndex + len(pointsBeforeSim)) + "/" + str(len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim))
+                percent = ((len(pointsBeforeSim) + objectPointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
+                statusText = "Restoring " + str(int(percent)) + "%"
                 Render()
             
             stickBeforeIndex = 0
@@ -695,7 +697,8 @@ def SpaceHandler(event=None):
                 combined = points+objectPoints
                 stickClass(combined[sticksBeforeSim[stickBeforeIndex].pointA], combined[sticksBeforeSim[stickBeforeIndex].pointB], sticksBeforeSim[stickBeforeIndex].length, sticksBeforeSim[stickBeforeIndex].background)
                 stickBeforeIndex += 1
-                statusText = "Restoring " + str(stickBeforeIndex + len(pointsBeforeSim) + len(objectPointsBeforeSim)) + "/" + str(len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim))
+                percent = ((stickBeforeIndex + len(pointsBeforeSim) + len(objectPointsBeforeSim)) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
+                statusText = "Restoring " + str(int(percent)) + "%"
                 Render()
                 
             for objectPoint in objectPoints:
@@ -844,7 +847,8 @@ def SaveToFile(event=None, useCurrent=True, returnFunc=None):
                 for point in points:
                     if point.save:
                         data.append(point.Parse()+'\n')
-                        statusText = "Saving " + str(points.index(point)) + "/" + str(len(points) + len(sticks) + len(objectPoints))
+                        percent = ((points.index(point)) / (len(points) + len(sticks) + len(objectPoints)))*100
+                        statusText = "Saving " + str(int(percent)) + "%"
                         Render()
 
                 data.append('=\n')
@@ -852,7 +856,8 @@ def SaveToFile(event=None, useCurrent=True, returnFunc=None):
                 for stick in sticks:
                     if stick.save:
                         data.append(stick.Parse()+ ',' + str(StickType(stick)) + '\n')
-                        statusText = "Saving " + str(sticks.index(stick) + len(points)) + "/" + str(len(points) + len(sticks) + len(objectPoints))
+                        percent = ((sticks.index(stick) + len(points)) / (len(points) + len(sticks) + len(objectPoints)))*100
+                        statusText = "Saving " + str(int(percent)) + "%"
                         Render()
 
                 data.append('=\n')
@@ -860,7 +865,8 @@ def SaveToFile(event=None, useCurrent=True, returnFunc=None):
                 for objectPoint in objectPoints:
                     if objectPoint.save:
                         data.append(objectPoint.Parse() + '\n')
-                        statusText = "Saving " + str(objectPoints.index(objectPoint) + len(points) + len(sticks)) + "/" + str(len(points) + len(sticks) + len(objectPoints))
+                        percent = ((objectPoints.index(objectPoint) + len(sticks) + len(points)) / (len(points) + len(sticks) + len(objectPoints)))*100
+                        statusText = "Saving " + str(int(percent)) + "%"
                         Render()
 
                 data.append('=\n')
@@ -909,14 +915,16 @@ def LoadFromFile(event=None):
                 #print(pointData)
                 if len(pointData) == 3:
                     Point([int(pointData[0]), int(pointData[1])], bool(int(pointData[2])))
-                statusText = "Loading " + str(pointList.index(pointDataChunk)) + "/" + str(total)
+                percent = ((pointList.index(pointDataChunk)) / (total))*100
+                statusText = "Loading " + str(int(percent)) + "%"
                 Render()
 
             for objectPointDataChunk in objectPointList:
                 objectPointData = objectPointDataChunk.split(',')
                 if len(objectPointData) >= 3:   
                     ObjectPoint([int(objectPointData[0]), int(objectPointData[1])], bool(int(objectPointData[2])), True, True, True, int(objectPointData[3]), True)
-                statusText = "Loading " + str(objectPointList.index(objectPointDataChunk)+len(pointList)) + "/" + str(total)
+                percent = ((objectPointList.index(objectPointDataChunk)+len(pointList)) / (total))*100
+                statusText = "Loading " + str(int(percent)) + "%"
                 Render()
                 
             for stickDataChunk in stickList:
@@ -926,7 +934,8 @@ def LoadFromFile(event=None):
                     stickClass = StickTypeClass(int(stickData[4]))
                     combined = points+objectPoints
                     stickClass(combined[int(stickData[0])], combined[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
-                statusText = "Loading " + str(stickList.index(stickDataChunk)+len(pointList)+len(objectPointList)) + "/" + str(total)
+                percent = ((stickList.index(stickDataChunk)+len(pointList)+len(objectPointList)) / (total))*100
+                statusText = "Loading " + str(int(percent)) + "%"
                 Render()
 
             for objectPoint in objectPoints:
