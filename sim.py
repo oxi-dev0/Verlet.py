@@ -301,6 +301,27 @@ class Stick:
             # Push point B to be restrained by stick length
             self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
 
+class WeakStick(Stick):
+    def CalcColour(self):
+        return "Green"
+
+    def Simulate(self):
+        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
+        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+
+        if Distance2D(self.pointA.position, self.pointB.position) > self.length + 50:
+            self.Remove()
+
+        if Distance2D(self.pointA.position, self.pointB.position) < self.length - 50:
+            self.Remove()
+        if not self.pointA.locked:
+            # Push point A to be restrained by stick length
+            self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+        if not self.pointB.locked:
+            # Push point B to be restrained by stick length
+            self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+
+
 class RopeStick(Stick):
     def CalcColour(self):
         if Distance2D(self.pointA.position, self.pointB.position) > self.length and simColour:
@@ -508,6 +529,8 @@ def StickType(stick):
         typ = 1
     if stick.__class__.__name__ == 'SlideStick':
         typ = 2
+    if stick.__class__.__name__ == 'WeakStick':
+        typ = 3
     return typ
 
 def StickTypeClass(classNum):
@@ -518,6 +541,8 @@ def StickTypeClass(classNum):
         stickClass = RopeStick
     elif classNum == 2:
         stickClass = SlideStick
+    elif classNum == 3:
+        stickClass = WeakStick
     return stickClass
 
 def PointType(point):
@@ -628,7 +653,7 @@ def SpaceHandler(event=None):
 
     global canClick
     if canClick:
-        global simNow, pointsBeforeSim, points, sticksBeforeSim, sticks, canvas, pauseSim, statusText, objectPointsBeforeSim, objectPoints
+        global simNow, pauseSim, pointsBeforeSim, points, sticksBeforeSim, sticks, canvas, pauseSim, statusText, objectPointsBeforeSim, objectPoints
         simNow = not simNow
         pauseSim = False
         if simNow:
@@ -666,48 +691,49 @@ def SpaceHandler(event=None):
                 objectPointIndex += 1
             
         else:
-            canClick = False
-            statusText = "Restoring"
-            Render()
-            Clear(True)
-    
-            pointBeforeIndex = 0
-            while pointBeforeIndex < len(pointsBeforeSim):
-                points.append(Point(pointsBeforeSim[pointBeforeIndex].position, pointsBeforeSim[pointBeforeIndex].locked, True, False))
-                pointBeforeIndex += 1
-                percent = ((pointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
-                statusText = "Restoring " + str(int(percent)) + "%"
+            if not pauseSim:
+                canClick = False
+                statusText = "Restoring"
                 Render()
+                Clear(True)
+        
+                pointBeforeIndex = 0
+                while pointBeforeIndex < len(pointsBeforeSim):
+                    points.append(Point(pointsBeforeSim[pointBeforeIndex].position, pointsBeforeSim[pointBeforeIndex].locked, True, False))
+                    pointBeforeIndex += 1
+                    percent = ((pointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
+                    statusText = "Restoring " + str(int(percent)) + "%"
+                    Render()
 
-                            
-            objectPointBeforeIndex = 0
-            while objectPointBeforeIndex < len(objectPointsBeforeSim):
-                objectPoint = objectPointsBeforeSim[objectPointBeforeIndex]
-                newObjectPoint = ObjectPoint(objectPoint.position, objectPoint.locked, True, True, True, objectPoint.owner, True)
-                objectPointBeforeIndex += 1
-                percent = ((len(pointsBeforeSim) + objectPointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
-                statusText = "Restoring " + str(int(percent)) + "%"
-                Render()
-            
-            stickBeforeIndex = 0
-            while stickBeforeIndex < len(sticksBeforeSim):
-                stickClass = None
-                stickType = sticksBeforeSim[stickBeforeIndex].stickType
-                stickClass = StickTypeClass(stickType)
-                combined = points+objectPoints
-                stickClass(combined[sticksBeforeSim[stickBeforeIndex].pointA], combined[sticksBeforeSim[stickBeforeIndex].pointB], sticksBeforeSim[stickBeforeIndex].length, sticksBeforeSim[stickBeforeIndex].background)
-                stickBeforeIndex += 1
-                percent = ((stickBeforeIndex + len(pointsBeforeSim) + len(objectPointsBeforeSim)) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
-                statusText = "Restoring " + str(int(percent)) + "%"
-                Render()
+                                
+                objectPointBeforeIndex = 0
+                while objectPointBeforeIndex < len(objectPointsBeforeSim):
+                    objectPoint = objectPointsBeforeSim[objectPointBeforeIndex]
+                    newObjectPoint = ObjectPoint(objectPoint.position, objectPoint.locked, True, True, True, objectPoint.owner, True)
+                    objectPointBeforeIndex += 1
+                    percent = ((len(pointsBeforeSim) + objectPointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
+                    statusText = "Restoring " + str(int(percent)) + "%"
+                    Render()
                 
-            for objectPoint in objectPoints:
-                if objectPoint.newlySpawned == True:
-                    sticks[objectPoint.owner].ChangeMiddlePoint(objectPoint)
-                    objectPoint.newlySpawned = False
+                stickBeforeIndex = 0
+                while stickBeforeIndex < len(sticksBeforeSim):
+                    stickClass = None
+                    stickType = sticksBeforeSim[stickBeforeIndex].stickType
+                    stickClass = StickTypeClass(stickType)
+                    combined = points+objectPoints
+                    stickClass(combined[sticksBeforeSim[stickBeforeIndex].pointA], combined[sticksBeforeSim[stickBeforeIndex].pointB], sticksBeforeSim[stickBeforeIndex].length, sticksBeforeSim[stickBeforeIndex].background)
+                    stickBeforeIndex += 1
+                    percent = ((stickBeforeIndex + len(pointsBeforeSim) + len(objectPointsBeforeSim)) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
+                    statusText = "Restoring " + str(int(percent)) + "%"
+                    Render()
+                    
+                for objectPoint in objectPoints:
+                    if objectPoint.newlySpawned == True:
+                        sticks[objectPoint.owner].ChangeMiddlePoint(objectPoint)
+                        objectPoint.newlySpawned = False
 
-            statusText = "Ready"
-            canClick = True
+                statusText = "Ready"
+                canClick = True
 # ----[SIMULATION RESET]-----
 
 def LockHandler(event):
