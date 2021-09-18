@@ -46,6 +46,8 @@ gridY=8
 windowCollide = True
 currentFile = ""
 simColour = True
+
+selectedStick = 0
 # ------------[DATA]------------
 
 # ------------[GUI DATA]------------
@@ -305,15 +307,28 @@ class WeakStick(Stick):
     def CalcColour(self):
         return "Green"
 
+    def Break(self):
+        # stickA + (normalize(stickB-stickA) * ((Distance(stickA, stickB)/2)+-10)
+        dist = Distance2D(self.pointA.position, self.pointB.position)/ 2
+        stickDir = Normalize2D(Subtract2D(self.pointB.position, self.pointA.position))
+
+        newPoint = Point(Add2D(self.pointA.position, Multiply2DByFloat(stickDir, (dist-10))), False)
+        Stick(self.pointA, newPoint, Distance2D(self.pointA.position, newPoint.position), False)
+        newPoint = Point(Add2D(self.pointA.position, Multiply2DByFloat(stickDir, (dist+10))), False)
+        Stick(self.pointB, newPoint, Distance2D(self.pointB.position, newPoint.position), False)
+        self.Remove()
+
+
     def Simulate(self):
         stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
         stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
 
-        if Distance2D(self.pointA.position, self.pointB.position) > self.length + 50:
-            self.Remove()
+        if Distance2D(self.pointA.position, self.pointB.position) > self.length + 25:
+            self.Break()
 
-        if Distance2D(self.pointA.position, self.pointB.position) < self.length - 50:
-            self.Remove()
+        if Distance2D(self.pointA.position, self.pointB.position) < self.length - 25:
+            self.Break()
+            
         if not self.pointA.locked:
             # Push point A to be restrained by stick length
             self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
@@ -545,6 +560,18 @@ def StickTypeClass(classNum):
         stickClass = WeakStick
     return stickClass
 
+def StickTypeName(num):
+    stickName = ""
+    if num == 0:
+        stickName = "Fixed"
+    elif num == 1:
+        stickName = "Rope"
+    elif num == 2:
+        stickName = "Slide"
+    elif num == 3:
+        stickName = "Weak"
+    return stickName
+
 def PointType(point):
     typ = 0
     if point.__class__.__name__ == 'ObjectPoint':
@@ -602,7 +629,7 @@ def Mouse1UpHandler(event):
     leftMouseDown = False
 
 def Mouse2DownHandler(event, shift=False, ctrl=False):
-    global rightMouseDown, window, prevPoint, shiftHeld, canClick
+    global rightMouseDown, window, prevPoint, shiftHeld, canClick, selectedStick
 
     stickType = 0
     if ctrl:
@@ -612,7 +639,7 @@ def Mouse2DownHandler(event, shift=False, ctrl=False):
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPoint([mouseX, mouseY])
-        TempStick(closest, [mouseX, mouseY], shift, stickType)
+        TempStick(closest, [mouseX, mouseY], shift, selectedStick)
         
     rightMouseDown = True
 
@@ -625,10 +652,7 @@ def Mouse2UpHandler(event, shift=False, ctrl=False):
         closest = GetClosestPoint([mouseX, mouseY])
         if not closest == currentTempStick.pointA:
             stickClass = None
-            if ctrl:
-                stickClass = SlideStick
-            else:
-                stickClass = Stick
+            stickClass = StickTypeClass(selectedStick)
             newStick = stickClass(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
 
     currentTempStick.Cleanup()
@@ -978,6 +1002,22 @@ def LoadFromFile(event=None):
             
 # ------------[LOADING]------------
 
+def SelectStick1(event):
+    global selectedStick
+    selectedStick = 0
+
+def SelectStick2(event):
+    global selectedStick
+    selectedStick = 1
+
+def SelectStick3(event):
+    global selectedStick
+    selectedStick = 2
+
+def SelectStick4(event):
+    global selectedStick
+    selectedStick = 3
+
 # ------------[BINDS]------------
 window.bind("<ButtonPress-1>", Mouse1DownHandler)
 window.bind("<ButtonRelease-1>", Mouse1UpHandler)
@@ -996,6 +1036,11 @@ window.bind("<Control-s>", SaveToFile)
 window.bind("<Control-Shift-s>", SaveToFileNoCurrent)
 window.bind("<Control-o>", LoadFromFile)
 window.bind("<Control-n>", NewFileInst)
+
+window.bind("1", SelectStick1)
+window.bind("2", SelectStick2)
+window.bind("3", SelectStick3)
+window.bind("4", SelectStick4)
 # ------------[BINDS]------------
 
 # ------------[SIMULATION]------------
@@ -1060,6 +1105,8 @@ def Render():
 
     # Update FPS Counter
     canvas.itemconfigure(fpsText, text=str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)))
+
+    canvas.itemconfigure(selectedStickText, text="Selected Stick: " + StickTypeName(selectedStick))
 
     # Update Title Bar
     title = "TKinter Physics Sim - V1"
@@ -1307,6 +1354,7 @@ statusBar = tk.Label(window, text="Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
 statusBar.pack(side=tk.BOTTOM, fill=tk.X)
 
 fpsText = canvas.create_text(20, 15, fill="black", text="0")
+selectedStickText = canvas.create_text(65, 33, fill="black", text="Current Stick: ")
 
 Render()
 
