@@ -403,6 +403,17 @@ class SlideStick(Stick):
         # middlePoint = pointA + projected
         self.middlePoint.position = Add2D(self.pointA.position, projected)
 
+        # Calculate stick data
+        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
+        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+        
+        if not self.pointA.locked:
+            # Push point A to be restrained by stick length
+            self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+        if not self.pointB.locked:
+            # Push point B to be restrained by stick length
+            self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+
     def Remove(self):
         global canvas, sticks
         
