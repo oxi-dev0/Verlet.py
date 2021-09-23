@@ -19,6 +19,7 @@ canvas.pack(fill="both", expand=True)
 # Physics
 gravity = 0.004
 numIterations = 2
+weakStickStrength = 25
 
 # Display
 circleRadius = 5
@@ -53,6 +54,7 @@ selectedStick = 0
 # ------------[GUI DATA]------------
 grav=0
 iters=0
+weakstrength=0
 gridx=0
 gridy=0
 simparampopup=0
@@ -320,13 +322,14 @@ class WeakStick(Stick):
 
 
     def Simulate(self):
+        global weakStickStrength
         stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
         stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
 
-        if Distance2D(self.pointA.position, self.pointB.position) > self.length + 25:
+        if Distance2D(self.pointA.position, self.pointB.position) > self.length + weakStickStrength:
             self.Break()
 
-        if Distance2D(self.pointA.position, self.pointB.position) < self.length - 25:
+        if Distance2D(self.pointA.position, self.pointB.position) < self.length - weakStickStrength:
             self.Break()
             
         if not self.pointA.locked:
@@ -1133,13 +1136,14 @@ def Render():
 
 # ------------[GUI FUNCTIONS]------------
 def SimParamsEnter():
-    global grav, iters, gravity, numIterations, simparampopup, canClick
+    global grav, iters, gravity, numIterations, simparampopup, canClick, weakstrength, weakStickStrength
     
     canClick = True
     try:
         simparampopup.destroy()
         gravity = float(grav.get())
         numIterations = int(iters.get())
+        weakStickStrength = int(weakstrength.get())
     except Exception as e: print(e)
 
 def GridParamsEnter():
@@ -1161,6 +1165,11 @@ def SimParamsNumItersDefault():
     global iters, numIterations
     iters.set('1')
     numIterations = 1
+
+def SimParamsWeakStrengthDefault():
+    global weakstrength, weakStickStrength
+    weakstrength.set('25')
+    weakStickStrength = 25
 
 def ControlsLoseFocus(event):
     global controlsPopup
@@ -1235,14 +1244,14 @@ def InfoWindow():
     B1.pack()
 
 def SimParamsWindow():
-    global window, gravity, numIterations, grav, iters, simparampopup
+    global window, gravity, numIterations, grav, iters, simparampopup, weakstrength, weakStickStength
 
     simparampopup = tk.Tk()
     simparampopup.resizable(False, False)
     #popup.overrideredirect(True)
     
     width=215
-    height=80
+    height=100
     center = CalculateMainCenter(width, height)
     
     simparampopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
@@ -1251,18 +1260,24 @@ def SimParamsWindow():
 
     grav = tk.StringVar(simparampopup, value=str(gravity))
     iters = tk.StringVar(simparampopup, value=str(numIterations))
+    weakstrength = tk.StringVar(simparampopup, value=str(weakStickStrength))
 
     tk.Label(simparampopup, text="Gravity:").grid(row=0, column=0)
     tk.Label(simparampopup, text="Iterations:").grid(row=1, column=0)
+    tk.Label(simparampopup, text="Weak-Stick Max Stretch:").grid(row=2, column=0)
 
     tk.Entry(simparampopup, textvariable=grav).grid(row=0, column=1)
     tk.Entry(simparampopup, textvariable=iters).grid(row=1, column=1)
+    tk.Entry(simparampopup, textvariable=weakstrength).grid(row=2, column=1)
 
     gravButton = ttk.Button(simparampopup, text="<", command=SimParamsGravDefault, width=3)
     gravButton.grid(row=0, column=2)
 
     itersButton = ttk.Button(simparampopup, text="<", command=SimParamsNumItersDefault, width=3)
     itersButton.grid(row=1, column=2)
+
+    stengthButton = ttk.Button(simparampopup, text="<", command=SimParamsWeakStrengthDefault, width=3)
+    itersButton.grid(row=2, column=2)
 
     button = ttk.Button(simparampopup, text="Save", command=SimParamsEnter)
     button.grid(row=3, column=1)
