@@ -793,11 +793,12 @@ def GridSpawnHandler(event):
             for yIndex in range(gridY):
                 currentYPoints.append(Point([mouseX + (xIndex*60), mouseY + (yIndex*60)], False))
                 Render()
+                stickClass = StickTypeClass(selectedStick)
                 if not yIndex == 0:
-                    Stick(currentYPoints[yIndex], currentYPoints[yIndex-1], Distance2D(currentYPoints[yIndex].position, currentYPoints[yIndex-1].position), False)
+                    stickClass(currentYPoints[yIndex], currentYPoints[yIndex-1], Distance2D(currentYPoints[yIndex].position, currentYPoints[yIndex-1].position), False)
                     Render()
                 if not xIndex == 0:
-                    Stick(currentYPoints[yIndex], previousYPoints[yIndex], Distance2D(currentYPoints[yIndex].position, previousYPoints[yIndex].position), False)
+                    stickClass(currentYPoints[yIndex], previousYPoints[yIndex], Distance2D(currentYPoints[yIndex].position, previousYPoints[yIndex].position), False)
                     Render()
             previousYPoints = currentYPoints.copy()
             currentYPoints.clear()
