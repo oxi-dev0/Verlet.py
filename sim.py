@@ -1162,8 +1162,8 @@ def SimParamsGravDefault():
 
 def SimParamsNumItersDefault():
     global iters, numIterations
-    iters.set('1')
-    numIterations = 1
+    iters.set('2')
+    numIterations = 2
 
 def SimParamsWeakStrengthDefault():
     global weakstrength, weakStickStrength
@@ -1249,7 +1249,7 @@ def SimParamsWindow():
     simparampopup.resizable(False, False)
     #popup.overrideredirect(True)
 
-    width=215
+    width=300
     height=100
     center = CalculateMainCenter(width, height)
 
@@ -1275,8 +1275,8 @@ def SimParamsWindow():
     itersButton = ttk.Button(simparampopup, text="<", command=SimParamsNumItersDefault, width=3)
     itersButton.grid(row=1, column=2)
 
-    stengthButton = ttk.Button(simparampopup, text="<", command=SimParamsWeakStrengthDefault, width=3)
-    itersButton.grid(row=2, column=2)
+    strengthButton = ttk.Button(simparampopup, text="<", command=SimParamsWeakStrengthDefault, width=3)
+    strengthButton.grid(row=2, column=2)
 
     button = ttk.Button(simparampopup, text="Save", command=SimParamsEnter)
     button.grid(row=3, column=1)
