@@ -403,6 +403,16 @@ class SlideStick(Stick):
         # middlePoint = pointA + projected
         self.middlePoint.position = Add2D(self.pointA.position, projected)
 
+        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
+        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+        
+        if not self.pointA.locked:
+            # Push point A to be restrained by stick length
+            self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+        if not self.pointB.locked:
+            # Push point B to be restrained by stick length
+            self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+
     def Remove(self):
         global canvas, sticks
         
@@ -584,7 +594,7 @@ def PointTypeClass(classNum):
         pointClass = Point
     elif classNum == 1:
         pointClass = ObjectPoint
-    return stickClass
+    return pointClass
     
 # ------------[UTIL FUNCTIONS]------------
 
@@ -1106,7 +1116,7 @@ def Render():
     # Update FPS Counter
     canvas.itemconfigure(fpsText, text=str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)))
 
-    canvas.itemconfigure(selectedStickText, text="Selected Stick: " + StickTypeName(selectedStick))
+    canvas.itemconfigure(selectedStickText, text="Selected Joint Type (1/2/3/4): " + StickTypeName(selectedStick))
 
     # Update Title Bar
     title = "TKinter Physics Sim - V1"
@@ -1301,7 +1311,7 @@ def ControlsWindow():
     controlsPopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
     controlsPopup.wm_title("Welcome")
 
-    label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n Delete - Delete closest point \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
+    label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n Delete - Delete closest point \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
     label.pack(side="top", fill="x", pady=20)
 
     button = ttk.Button(controlsPopup, text="Continue", command=controlsPopup.destroy)
@@ -1354,7 +1364,7 @@ statusBar = tk.Label(window, text="Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
 statusBar.pack(side=tk.BOTTOM, fill=tk.X)
 
 fpsText = canvas.create_text(20, 15, fill="black", text="0")
-selectedStickText = canvas.create_text(65, 33, fill="black", text="Current Stick: ")
+selectedStickText = canvas.create_text(15, 33, fill="black", text="Current Stick: ", anchor="w")
 
 Render()
 
