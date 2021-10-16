@@ -19,6 +19,7 @@ canvas.pack(fill="both", expand=True)
 # Physics
 gravity = 0.004
 numIterations = 2
+weakStickStrength = 25
 
 # Display
 circleRadius = 5
@@ -53,6 +54,7 @@ selectedStick = 0
 # ------------[GUI DATA]------------
 grav=0
 iters=0
+weakstrength=0
 gridx=0
 gridy=0
 simparampopup=0
@@ -141,7 +143,7 @@ class Point(object):
         colour = "black"
         if self.locked:
             colour = "pink"
-        
+
         canvas.itemconfigure(self.renderObject, fill=colour)
 
     def Remove(self):
@@ -167,14 +169,14 @@ class Point(object):
 
     def Simulate(self):
         global gravity, windowCollide
-        
+
         if not self.locked:
             posBefore = self.position
 
             # Keep velocity from last update
             posdelta = Subtract2D(self.position, self.previousPosition)
             self.position = Add2D(self.position, posdelta)
-            
+
             # Calculate frame delta time
             delta = (time.time()*1000)-lastFrameTime
 
@@ -188,7 +190,7 @@ class Point(object):
                 if self.position[1] > window.winfo_height()-30:
                     self.position = Subtract2D(self.position, Divide2DByFloat(posdelta, 3))
                 self.position[1] = Clamp(self.position[1], 10, window.winfo_height()-30)
-            
+
             self.previousPosition = posBefore
 
 class ObjectPoint(Point):
@@ -252,7 +254,7 @@ class Stick:
         if not standin:
             self.pointA.references.append(self)
             self.pointB.references.append(self)
-            
+
         self.length = tlength
         self.background = tbackground
 
@@ -273,7 +275,7 @@ class Stick:
 
     def Remove(self):
         global canvas, sticks
-        
+
         if hasattr(self, 'renderObject'):
             canvas.delete(self.renderObject)
         if self in self.pointA.references:
@@ -295,7 +297,7 @@ class Stick:
         # Calculate stick data
         stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
         stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
-        
+
         if not self.pointA.locked:
             # Push point A to be restrained by stick length
             self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
@@ -320,15 +322,16 @@ class WeakStick(Stick):
 
 
     def Simulate(self):
+        global weakStickStrength
         stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
         stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
 
-        if Distance2D(self.pointA.position, self.pointB.position) > self.length + 25:
+        if Distance2D(self.pointA.position, self.pointB.position) > self.length + weakStickStrength:
             self.Break()
 
-        if Distance2D(self.pointA.position, self.pointB.position) < self.length - 25:
+        if Distance2D(self.pointA.position, self.pointB.position) < self.length - weakStickStrength:
             self.Break()
-            
+
         if not self.pointA.locked:
             # Push point A to be restrained by stick length
             self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
@@ -343,10 +346,10 @@ class RopeStick(Stick):
             return "Blue"
         else:
             return "Purple"
-    
+
     def Simulate(self):
         global canvas
-        
+
         # Calculate stick data
         stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
         stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
@@ -355,7 +358,7 @@ class RopeStick(Stick):
             canvas.itemconfig(self.renderObject, fill=self.CalcColour())
 
         currentLength = Distance2D(self.pointA.position, self.pointB.position)
-        if currentLength > self.length:   
+        if currentLength > self.length:
             if not self.pointA.locked:
                 # Push point A to be restrained by stick length
                 self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
@@ -366,7 +369,7 @@ class RopeStick(Stick):
 class SlideStick(Stick):
     def __init__(self, tpointA, tpointB, tlength, tbackground, render=True):
         global canvas, sticks, stickThickness
-        
+
         self.middlePoint = ObjectPoint(ParseInt2D(Divide2DByFloat(Add2D(tpointA.position, tpointB.position), 2)), False, True, True, True)
         self.stick1 = RopeStick(tpointA, self.middlePoint, tlength, False, True, False, False)
         self.stick2 = RopeStick(tpointB, self.middlePoint, tlength, False, True, False, False)
@@ -383,14 +386,14 @@ class SlideStick(Stick):
         self.pointA.references.append(self)
         self.pointB.references.append(self)
         self.middlePoint.references.append(self)
-        
+
         sticks.append(self)
 
     def Simulate(self):
         newDist = Distance2D(self.pointA.position, self.pointB.position)
         self.stick1.length = newDist-10
         self.stick2.length = newDist-10
-        
+
         self.stick1.Simulate()
         self.stick2.Simulate()
 
@@ -405,7 +408,7 @@ class SlideStick(Stick):
 
         stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
         stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
-        
+
         if not self.pointA.locked:
             # Push point A to be restrained by stick length
             self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
@@ -415,7 +418,7 @@ class SlideStick(Stick):
 
     def Remove(self):
         global canvas, sticks
-        
+
         if hasattr(self, 'renderObject'):
             canvas.delete(self.renderObject)
         if self in self.pointA.references:
@@ -453,7 +456,7 @@ class TempStick:
             colour = "gray89"
         if ttype == 1:
             colour = "purple"
-            
+
         self.background = tbackground
         self.renderObject = canvas.create_line(self.pointA.position[0], self.pointA.position[1], mousePos[0], mousePos[1], width=stickThickness, fill=colour)
         currentTempStick = self
@@ -462,13 +465,13 @@ class TempStick:
         global currentTempStick, canvas
         canvas.delete(currentTempStick.renderObject)
         currentTempStick = 0
-        
+
 # ------------[CLASSES]------------
 
 # ------------[UTIL FUNCTIONS]------------
 def GetClosestPoint(pos):
     global points, objectPoints
-    
+
     closest = 0
     closestDist = 1000000
     for point in points:
@@ -484,7 +487,7 @@ def GetClosestPoint(pos):
 
 def GetClosestPointThreshold(pos, thresh):
     global points, objectPoints
-    
+
     closest = 0
     closestDist = 1000000
     for point in points:
@@ -595,7 +598,7 @@ def PointTypeClass(classNum):
     elif classNum == 1:
         pointClass = ObjectPoint
     return pointClass
-    
+
 # ------------[UTIL FUNCTIONS]------------
 
 # ------------[INPUT HANDLERS]------------
@@ -605,17 +608,17 @@ def Mouse1DownHandler(event):
     if not leftMouseDown and canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        closest = GetClosestPointThreshold([mouseX, mouseY], circleRadius * 5) 
+        closest = GetClosestPointThreshold([mouseX, mouseY], circleRadius * 5)
         if closest == 0:
             newPoint = Point([mouseX, mouseY], False)
             prevPoint = newPoint
         else:
-            if closest.locked == True or simNow == False: 
+            if closest.locked == True or simNow == False:
                 heldPoint = closest
             elif simNow == True:
                 grabPoint = Point([mouseX, mouseY], True, False, False)
                 Stick(grabPoint, closest, Distance2D(grabPoint.position, closest.position), False, False)
-    
+
     leftMouseDown = True
 
 def Mouse1UpHandler(event):
@@ -624,7 +627,7 @@ def Mouse1UpHandler(event):
     if canClick:
         if simNow == False and not heldPoint == 0:
             heldPoint.previousPosition = heldPoint.position
-            
+
             refIndex = 0
             referencesCopy = heldPoint.references.copy()
             while refIndex < len(referencesCopy):
@@ -634,7 +637,7 @@ def Mouse1UpHandler(event):
         if not grabPoint == 0:
             grabPoint.Remove()
             grabPoint = 0
-    
+
     heldPoint = 0
     leftMouseDown = False
 
@@ -650,12 +653,12 @@ def Mouse2DownHandler(event, shift=False, ctrl=False):
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPoint([mouseX, mouseY])
         TempStick(closest, [mouseX, mouseY], shift, selectedStick)
-        
+
     rightMouseDown = True
 
 def Mouse2UpHandler(event, shift=False, ctrl=False):
     global rightMouseDown, currentTempStick, shiftHeld, canClick
-    
+
     if canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
@@ -666,7 +669,7 @@ def Mouse2UpHandler(event, shift=False, ctrl=False):
             newStick = stickClass(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
 
     currentTempStick.Cleanup()
-        
+
     rightMouseDown = False
 
 def ShiftDownHandler(event):
@@ -692,7 +695,7 @@ def SpaceHandler(event=None):
         pauseSim = False
         if simNow:
             statusText = "Simulating"
-            
+
             pointsBeforeSim.clear()
 
             pointIndex = 0
@@ -702,7 +705,7 @@ def SpaceHandler(event=None):
                 pointIndex +=1
 
             sticksBeforeSim.clear()
-            
+
             stickIndex = 0
             while stickIndex < len(sticks):
                 if sticks[stickIndex].save:
@@ -711,7 +714,7 @@ def SpaceHandler(event=None):
                     pointAIndex = (points+objectPoints).index(sticks[stickIndex].pointA)
 
                     pointBIndex = (points+objectPoints).index(sticks[stickIndex].pointB)
-                    
+
                     sticksBeforeSim.append(Stick(pointAIndex, pointBIndex, sticks[stickIndex].length, sticks[stickIndex].background, False, True, False, stickType))
                 stickIndex += 1
 
@@ -723,14 +726,14 @@ def SpaceHandler(event=None):
                     objectPoint = objectPoints[objectPointIndex]
                     objectPointsBeforeSim.append(ObjectPoint(objectPoint.position, objectPoint.locked, False, False, False, sticks.index(objectPoint.owner)))
                 objectPointIndex += 1
-            
+
         else:
             if not pauseSim:
                 canClick = False
                 statusText = "Restoring"
                 Render()
                 Clear(True)
-        
+
                 pointBeforeIndex = 0
                 while pointBeforeIndex < len(pointsBeforeSim):
                     points.append(Point(pointsBeforeSim[pointBeforeIndex].position, pointsBeforeSim[pointBeforeIndex].locked, True, False))
@@ -739,7 +742,7 @@ def SpaceHandler(event=None):
                     statusText = "Restoring " + str(int(percent)) + "%"
                     Render()
 
-                                
+
                 objectPointBeforeIndex = 0
                 while objectPointBeforeIndex < len(objectPointsBeforeSim):
                     objectPoint = objectPointsBeforeSim[objectPointBeforeIndex]
@@ -748,7 +751,7 @@ def SpaceHandler(event=None):
                     percent = ((len(pointsBeforeSim) + objectPointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
                     statusText = "Restoring " + str(int(percent)) + "%"
                     Render()
-                
+
                 stickBeforeIndex = 0
                 while stickBeforeIndex < len(sticksBeforeSim):
                     stickClass = None
@@ -760,7 +763,7 @@ def SpaceHandler(event=None):
                     percent = ((stickBeforeIndex + len(pointsBeforeSim) + len(objectPointsBeforeSim)) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
                     statusText = "Restoring " + str(int(percent)) + "%"
                     Render()
-                    
+
                 for objectPoint in objectPoints:
                     if objectPoint.newlySpawned == True:
                         sticks[objectPoint.owner].ChangeMiddlePoint(objectPoint)
@@ -803,11 +806,12 @@ def GridSpawnHandler(event):
             for yIndex in range(gridY):
                 currentYPoints.append(Point([mouseX + (xIndex*60), mouseY + (yIndex*60)], False))
                 Render()
+                stickClass = StickTypeClass(selectedStick)
                 if not yIndex == 0:
-                    Stick(currentYPoints[yIndex], currentYPoints[yIndex-1], Distance2D(currentYPoints[yIndex].position, currentYPoints[yIndex-1].position), False)
+                    stickClass(currentYPoints[yIndex], currentYPoints[yIndex-1], Distance2D(currentYPoints[yIndex].position, currentYPoints[yIndex-1].position), False)
                     Render()
                 if not xIndex == 0:
-                    Stick(currentYPoints[yIndex], previousYPoints[yIndex], Distance2D(currentYPoints[yIndex].position, previousYPoints[yIndex].position), False)
+                    stickClass(currentYPoints[yIndex], previousYPoints[yIndex], Distance2D(currentYPoints[yIndex].position, previousYPoints[yIndex].position), False)
                     Render()
             previousYPoints = currentYPoints.copy()
             currentYPoints.clear()
@@ -850,7 +854,7 @@ def NewFile(contin=False, prompt=False):
             currentFile = ""
             gravity = 0.004
             numIterations = 2
-            
+
 def NewFileInst():
     NewFile(False, True)
 
@@ -877,23 +881,23 @@ def CloseSave(contin=False, prompt=False):
         else:
             window.destroy()
             exit()
-            
+
 def CloseSaveInst():
     CloseSave(False, True)
-    
+
 # ------------[INPUT HANDLERS]------------
 
 # ------------[LOADING]------------
 def SaveToFile(event=None, useCurrent=True, returnFunc=None):
     global simNow, points, sticks, statusText, canClick, gravity, numIterations, currentFile
-    
-    if canClick or returnFunc: 
+
+    if canClick or returnFunc:
         if not simNow:
             canClick = False
             path = os.getcwd()+'/Maps/'
             if not os.path.exists(path):
                 os.mkdir(path)
-            
+
             file = None
             if currentFile == "" or not useCurrent:
                 file = tk.filedialog.asksaveasfile(mode="w", filetypes=[('phys', '*.phys')], defaultextension=[('*.phys')], initialdir=path)
@@ -932,15 +936,15 @@ def SaveToFile(event=None, useCurrent=True, returnFunc=None):
                 data.append('=\n')
 
                 data.append(str(gravity) + "," + str(numIterations))
-                
+
                 file.writelines(data)
                 file.close()
-                
+
                 statusText = "Ready"
 
                 if returnFunc:
                     returnFunc()
-                    
+
             canClick = True
 
 def SaveToFileNoCurrent():
@@ -963,7 +967,7 @@ def LoadFromFile(event=None):
         if file:
             statusText = "Loading"
             currentFile = file.name
-            
+
             data = file.read()
             segments = data.split('=')
             pointList = segments[0].split('\n')
@@ -981,12 +985,12 @@ def LoadFromFile(event=None):
 
             for objectPointDataChunk in objectPointList:
                 objectPointData = objectPointDataChunk.split(',')
-                if len(objectPointData) >= 3:   
+                if len(objectPointData) >= 3:
                     ObjectPoint([int(objectPointData[0]), int(objectPointData[1])], bool(int(objectPointData[2])), True, True, True, int(objectPointData[3]), True)
                 percent = ((objectPointList.index(objectPointDataChunk)+len(pointList)) / (total))*100
                 statusText = "Loading " + str(int(percent)) + "%"
                 Render()
-                
+
             for stickDataChunk in stickList:
                 stickData = stickDataChunk.split(',')
                 #print(stickData)
@@ -1002,14 +1006,14 @@ def LoadFromFile(event=None):
                 if objectPoint.newlySpawned == True:
                     sticks[objectPoint.owner].ChangeMiddlePoint(objectPoint)
                     objectPoint.newlySpawned = False
-            
+
             settings = segments[3].split(',')
             gravity = float(settings[0])
             numIterations = int(settings[1])
 
             canClick = True
             statusText = "Ready"
-            
+
 # ------------[LOADING]------------
 
 def SelectStick1(event):
@@ -1056,7 +1060,7 @@ window.bind("4", SelectStick4)
 # ------------[SIMULATION]------------
 def Simulate():
     global points, objectPoints, sticks, lastFrameTime, numIterations, windowCollide
-    
+
     for point in points:
         point.Simulate()
 
@@ -1086,9 +1090,9 @@ def Interact():
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         grabPoint.position = [mouseX, mouseY]
-        
+
 # ------------[INTERACT]------------
-    
+
 # ------------[RENDER]------------
 def Render():
     global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile, objectPoints, sticks
@@ -1098,7 +1102,7 @@ def Render():
     for stick in sticks:
         if hasattr(stick, 'renderObject'):
             canvas.coords(stick.renderObject, stick.pointA.position[0], stick.pointA.position[1], stick.pointB.position[0], stick.pointB.position[1])
-        
+
     for point in points:
         canvas.coords(point.renderObject, point.position[0]-circleRadius, point.position[1]-circleRadius, point.position[0]+circleRadius, point.position[1]+circleRadius)
     for point in objectPoints:
@@ -1106,7 +1110,7 @@ def Render():
 
     # Update Statusbar
     statusBar['text'] = statusText
-    
+
     # Update temp stick if it exists
     if not currentTempStick == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
@@ -1126,23 +1130,24 @@ def Render():
 
     # Draw
     window.update()
-    
+
 # ------------[RENDER]------------
 
 # ------------[GUI FUNCTIONS]------------
 def SimParamsEnter():
-    global grav, iters, gravity, numIterations, simparampopup, canClick
-    
+    global grav, iters, gravity, numIterations, simparampopup, canClick, weakstrength, weakStickStrength
+
     canClick = True
     try:
         simparampopup.destroy()
         gravity = float(grav.get())
         numIterations = int(iters.get())
+        weakStickStrength = int(weakstrength.get())
     except Exception as e: print(e)
 
 def GridParamsEnter():
     global grav, gridx, gridy, gridX, gridY, gridparampopup, canClick
-    
+
     canClick = True
     try:
         gridparampopup.destroy()
@@ -1160,6 +1165,11 @@ def SimParamsNumItersDefault():
     iters.set('1')
     numIterations = 1
 
+def SimParamsWeakStrengthDefault():
+    global weakstrength, weakStickStrength
+    weakstrength.set('25')
+    weakStickStrength = 25
+
 def ControlsLoseFocus(event):
     global controlsPopup
     controlsPopup.focus_force()
@@ -1167,11 +1177,11 @@ def ControlsLoseFocus(event):
 def SavePromptSave():
     global savepromptreturn
     SaveToFile(None, True, SavePromptSaveFinished)
-    
+
 def SavePromptSaveFinished():
     global savepromptreturn
     SavePrompt(savepromptreturn, True, True)
-    
+
 def SavePromptNoSave():
     global savepromptreturn
     SavePrompt(savepromptreturn, True, True)
@@ -1179,25 +1189,25 @@ def SavePromptNoSave():
 def SavePromptCancel():
     global savepromptreturn
     SavePrompt(savepromptreturn, True, False)
-    
+
 # ------------[GUI FUNCTIONS]------------
 
 # ------------[POPUPS]------------
 def SavePrompt(returnFunc, returnNow=False, contin=False):
     global savepromptreturn, savepromptpopup, canClick
     savepromptreturn = returnFunc
-    
+
     if not returnNow:
         canClick = False
         global window
         savepromptpopup = tk.Tk()
         savepromptpopup.resizable(False, False)
         #savepromptpopup.overrideredirect(True)
-        
+
         width=250
         height=100
         center = CalculateMainCenter(width, height)
-    
+
         savepromptpopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
         savepromptpopup.wm_title("Alert")
 
@@ -1224,7 +1234,7 @@ def InfoWindow():
     popup = tk.Tk()
     popup.resizable(False, False)
     center = CalculateMainCenter(260, 100)
-    
+
     popup.geometry('%dx%d+%d+%d' % (260, 100, center[0], center[1]))
     popup.wm_title("About")
     label = ttk.Label(popup, text="TKinter-based Physics Simulator. Written by Oxi.")
@@ -1233,34 +1243,40 @@ def InfoWindow():
     B1.pack()
 
 def SimParamsWindow():
-    global window, gravity, numIterations, grav, iters, simparampopup
+    global window, gravity, numIterations, grav, iters, simparampopup, weakstrength, weakStickStength
 
     simparampopup = tk.Tk()
     simparampopup.resizable(False, False)
     #popup.overrideredirect(True)
-    
+
     width=215
-    height=80
+    height=100
     center = CalculateMainCenter(width, height)
-    
+
     simparampopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
     simparampopup.wm_title("Sim Params")
 
 
     grav = tk.StringVar(simparampopup, value=str(gravity))
     iters = tk.StringVar(simparampopup, value=str(numIterations))
+    weakstrength = tk.StringVar(simparampopup, value=str(weakStickStrength))
 
     tk.Label(simparampopup, text="Gravity:").grid(row=0, column=0)
     tk.Label(simparampopup, text="Iterations:").grid(row=1, column=0)
+    tk.Label(simparampopup, text="Weak-Stick Max Stretch:").grid(row=2, column=0)
 
     tk.Entry(simparampopup, textvariable=grav).grid(row=0, column=1)
     tk.Entry(simparampopup, textvariable=iters).grid(row=1, column=1)
+    tk.Entry(simparampopup, textvariable=weakstrength).grid(row=2, column=1)
 
     gravButton = ttk.Button(simparampopup, text="<", command=SimParamsGravDefault, width=3)
     gravButton.grid(row=0, column=2)
 
     itersButton = ttk.Button(simparampopup, text="<", command=SimParamsNumItersDefault, width=3)
     itersButton.grid(row=1, column=2)
+
+    stengthButton = ttk.Button(simparampopup, text="<", command=SimParamsWeakStrengthDefault, width=3)
+    itersButton.grid(row=2, column=2)
 
     button = ttk.Button(simparampopup, text="Save", command=SimParamsEnter)
     button.grid(row=3, column=1)
@@ -1273,11 +1289,11 @@ def GridParamsWindow():
     gridparampopup = tk.Tk()
     gridparampopup.resizable(False, False)
     #popup.overrideredirect(True)
-    
+
     width=215
     height=60
     center = CalculateMainCenter(width, height)
-    
+
     gridparampopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
     gridparampopup.wm_title("Grid Params")
 
@@ -1303,11 +1319,11 @@ def ControlsWindow():
     controlsPopup = tk.Tk()
     controlsPopup.resizable(False, False)
     #controlsPopup.overrideredirect(True)
-    
+
     width=325
     height=330
     center = CalculateMainCenter(width, height)
-    
+
     controlsPopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
     controlsPopup.wm_title("Welcome")
 
@@ -1322,7 +1338,7 @@ def ControlsWindow():
     controlsPopup.focus_force()
 
     canClick = True
-    
+
 # ------------[POPUPS]------------
 
 # ------------[GUI MENUBAR]------------
@@ -1384,4 +1400,3 @@ while True:
 
     sleep(0.01)
 # MAIN LOOP
-
