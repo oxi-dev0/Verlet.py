@@ -24,8 +24,9 @@ Read the controls then feel free to open one of the example maps.
 
 
 ### Issues (In order of importance)
+- Can still make actions while saving/loading
 - Not clear on how to use
-- Not full commenting
+- Needs commenting
 - Rendering Performance
 - Simulation Performance
 - Dodgy cleanup/reset code
