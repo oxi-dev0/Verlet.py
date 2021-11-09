@@ -4,9 +4,11 @@ This is a Tkinter based cloth/rope simulator in python. This is more of an exper
 ------------
 
 
-### Instructions
-Make sure you have tkinter installed into python, then run sim.py with python 3.xx. A window should appear with a welcome message in front of it.
-Read the controls then feel free to open one of the example maps.
+### Installation / Running
+1. Install python 3.xx
+2. Install tkinter ('pip3 install tkinter')
+3. Run sim.py
+4. Read controls then play around and feel free to open demo maps (File > Open)
 
 ------------
 
