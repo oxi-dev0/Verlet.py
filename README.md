@@ -29,7 +29,6 @@ This is a Tkinter based cloth/rope simulator in python. Performance needs work o
 
 ### Future
 - Motor Point / Stick types
-- Camera control (zooming + movement)
 - Water / Sand / Particle Sim
 - Inter-Collision
 ------------
