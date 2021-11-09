@@ -35,15 +35,6 @@ This is a Tkinter based cloth/rope simulator in python. Performance needs work o
 ------------
 
 
-### Issues (In order of importance)
-- Can still make actions while saving/loading
-- Not clear on how to use
-- Code needs commenting
-- Rendering Performance
-- Simulation Performance
-- Slow cleanup/reset code
--------------
-
 <p align="center">
     <img src="https://user-images.githubusercontent.com/33568643/132953990-c72c696e-0d71-4939-9521-ccdd8857990b.jpg" width=500>
  </p>
