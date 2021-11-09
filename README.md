@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://github.com/oxi-dev0/TkinterPhysicsSim/blob/main/FrontImage.jpg" width=500> <br><br>
+    <img src="https://github.com/oxi-dev0/TkinterPhysicsSim/blob/main/Images/FrontImage.jpg" width=500> <br><br>
     <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
     <img src="https://img.shields.io/github/downloads/oxi-dev0/TkinterPhysicsSim/total" alt="Downloads">
     <img src="https://img.shields.io/github/issues/oxi-dev0/TkinterPhysicsSim" alt="Issues">
