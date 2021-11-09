@@ -1,4 +1,14 @@
-![Size](https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim)
+<p align="center">
+    <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
+    <img src="https://img.shields.io/github/downloads/oxi-dev0/TkinterPhysicsSim/total" alt="Downloads">
+    <img src="https://img.shields.io/github/issues/oxi-dev0/TkinterPhysicsSim" alt="Issues">
+    <img src="https://img.shields.io/github/forks/oxi-dev0/TkinterPhysicsSim" alt="Forks">
+    <img src="https://img.shields.io/github/stars/oxi-dev0/TkinterPhysicsSim" alt="Stars">
+    <img src="https://img.shields.io/github/license/oxi-dev0/TkinterPhysicsSim" alt="License">
+    <a href="https://twitter.com/intent/tweet?text=Check%20out%20this%20cool%20Tkinter%20physics%20sim%21%20https%3A%2F%2Fgithub.com%2Foxi-dev0%2FTkinterPhysicsSim%2F">
+      <img src="https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Foxi-dev0%2FTkinterPhysicsSim" alt="Tweet">
+    </a>
+</p>
 
 ### Overview
 This is a Tkinter based cloth/rope simulator in python. Performance needs work on, and any help with issues would be appreciated :)
