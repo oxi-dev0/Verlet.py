@@ -921,7 +921,7 @@ def CloseSave(contin=False, prompt=False):
                 SavePrompt(CloseSave)
         else:
             window.destroy()
-            exit()
+            os._exit(0)
     else:
         if len(points) > 0:
             if not contin:
@@ -929,13 +929,13 @@ def CloseSave(contin=False, prompt=False):
                     SavePrompt(CloseSave)
                 else:
                     window.destroy()
-                    exit()
+                    os._exit(0)
             else:
                 window.destroy()
-                exit()
+                os._exit(0)
         else:
             window.destroy()
-            exit()
+            os._exit(0)
 
 def CloseSaveInst():
     CloseSave(False, True)
@@ -1389,13 +1389,13 @@ def ControlsWindow():
     #controlsPopup.overrideredirect(True)
 
     width=325
-    height=330
+    height=390
     center = CalculateMainCenter(width, height)
 
     controlsPopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
     controlsPopup.wm_title("Welcome")
 
-    label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n Delete - Delete closest point \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
+    label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n Delete - Delete closest point \n Shift + Right Click Drag - Slice joints \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
     label.pack(side="top", fill="x", pady=20)
 
     button = ttk.Button(controlsPopup, text="Continue", command=controlsPopup.destroy)
