@@ -1,5 +1,4 @@
-![Python](https://img.shields.io/badge/Python-3670A0?style=flatsquare&logo=python&logoColor=ffdd54)
-![TKinter](https://img.shields.io/badge/TKinter-3670A0?style=flatsquare&logo=python&logoColor=ffdd54)
+![Size](https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim)
 
 ### Overview
 This is a Tkinter based cloth/rope simulator in python. Performance needs work on, and any help with issues would be appreciated :)
