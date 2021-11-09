@@ -15,6 +15,13 @@ window.geometry("1920x1080")
 canvas = tk.Canvas(window, width=1000, height=1000)
 canvas.pack(fill="both", expand=True)
 
+def resize(event):
+    global canvas
+    w,h = event.width, event.height-80
+    canvas.config(width=w, height=h)
+
+window.bind('<Configure>', resize)
+
 # ------------[SETTINGS]------------
 # Physics
 gravity = 0.004
@@ -47,6 +54,9 @@ gridY=8
 windowCollide = True
 currentFile = ""
 simColour = True
+
+dragDeleting = False
+lastMousePos = [0,0]
 
 selectedStick = 0
 # ------------[DATA]------------
@@ -114,6 +124,35 @@ def Project2D(a, b):
 
 def ParseInt2D(a):
     return [int(a[0]), int(a[1])]
+
+def OnSegment2D(p1, p2, p):
+    return min(p1[0], p2[0]) <= p[0] <= max(p1[0], p2[0]) and min(p1[1], p2[1]) <= p[1] <= max(p1[1], p2[1])
+
+def CrossProduct2D(a, b):
+    return a[0]*b[1] - a[1]*b[0]
+
+def Direction2D(p1, p2, p3):
+	return CrossProduct2D(Subtract2D(p3, p1), Subtract2D(p2, p1))
+
+def Intersect2D(p1, p2, p3, p4):
+    d1 = Direction2D(p3, p4, p1)
+    d2 = Direction2D(p3, p4, p2)
+    d3 = Direction2D(p1, p2, p3)
+    d4 = Direction2D(p1, p2, p4)
+
+    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
+        return True
+
+    elif d1 == 0 and OnSegment2D(p3, p4, p1):
+        return True
+    elif d2 == 0 and OnSegment2D(p3, p4, p2):
+        return True
+    elif d3 == 0 and OnSegment2D(p1, p2, p3):
+        return True
+    elif d4 == 0 and OnSegment2D(p1, p2, p4):
+        return True
+    else:
+        return False
 # ------------[VECTOR MATH FUNCTIONS]------------
 
 # ------------[CLASSES]------------
@@ -428,6 +467,7 @@ class SlideStick(Stick):
         if self in self.middlePoint.references:
             self.middlePoint.references.remove(self)
         self.middlePoint.owner = None
+        self.middlePoint.Remove()
         self.stick1.Remove()
         self.stick2.Remove()
         sticks.remove(self)
@@ -642,33 +682,45 @@ def Mouse1UpHandler(event):
     leftMouseDown = False
 
 def Mouse2DownHandler(event, shift=False, ctrl=False):
-    global rightMouseDown, window, prevPoint, shiftHeld, canClick, selectedStick
+    global rightMouseDown, window, prevPoint, shiftHeld, canClick, selectedStick, dragDeleting, lastMousePos
 
     stickType = 0
     if ctrl:
         stickType = 1
 
-    if not rightMouseDown and canClick:
+    if not rightMouseDown and canClick and not shift:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPoint([mouseX, mouseY])
         TempStick(closest, [mouseX, mouseY], shift, selectedStick)
+    
+    if not rightMouseDown and canClick and shift:
+        dragDeleting = True
+
+        mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
+        mouseY = int(window.winfo_pointery()-window.winfo_rooty())
+        lastMousePos = [mouseX, mouseY]
 
     rightMouseDown = True
 
 def Mouse2UpHandler(event, shift=False, ctrl=False):
-    global rightMouseDown, currentTempStick, shiftHeld, canClick
+    global rightMouseDown, currentTempStick, shiftHeld, canClick, dragDeleting
 
     if canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPoint([mouseX, mouseY])
-        if not closest == currentTempStick.pointA:
-            stickClass = None
-            stickClass = StickTypeClass(selectedStick)
-            newStick = stickClass(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
+        if currentTempStick:
+            if not closest == currentTempStick.pointA:
+                stickClass = None
+                stickClass = StickTypeClass(selectedStick)
+                newStick = stickClass(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
+        
 
-    currentTempStick.Cleanup()
+    dragDeleting = False
+
+    if currentTempStick:
+        currentTempStick.Cleanup()
 
     rightMouseDown = False
 
@@ -740,7 +792,8 @@ def SpaceHandler(event=None):
                     pointBeforeIndex += 1
                     percent = ((pointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
                     statusText = "Restoring " + str(int(percent)) + "%"
-                    Render()
+                    statusBar['text'] = statusText
+                    window.update()
 
 
                 objectPointBeforeIndex = 0
@@ -750,7 +803,8 @@ def SpaceHandler(event=None):
                     objectPointBeforeIndex += 1
                     percent = ((len(pointsBeforeSim) + objectPointBeforeIndex) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
                     statusText = "Restoring " + str(int(percent)) + "%"
-                    Render()
+                    statusBar['text'] = statusText
+                    window.update()
 
                 stickBeforeIndex = 0
                 while stickBeforeIndex < len(sticksBeforeSim):
@@ -762,7 +816,8 @@ def SpaceHandler(event=None):
                     stickBeforeIndex += 1
                     percent = ((stickBeforeIndex + len(pointsBeforeSim) + len(objectPointsBeforeSim)) / (len(pointsBeforeSim) + len(sticksBeforeSim) + len(objectPointsBeforeSim)))*100
                     statusText = "Restoring " + str(int(percent)) + "%"
-                    Render()
+                    statusBar['text'] = statusText
+                    window.update()
 
                 for objectPoint in objectPoints:
                     if objectPoint.newlySpawned == True:
@@ -981,7 +1036,8 @@ def LoadFromFile(event=None):
                     Point([int(pointData[0]), int(pointData[1])], bool(int(pointData[2])))
                 percent = ((pointList.index(pointDataChunk)) / (total))*100
                 statusText = "Loading " + str(int(percent)) + "%"
-                Render()
+                statusBar['text'] = statusText
+                window.update()
 
             for objectPointDataChunk in objectPointList:
                 objectPointData = objectPointDataChunk.split(',')
@@ -989,7 +1045,8 @@ def LoadFromFile(event=None):
                     ObjectPoint([int(objectPointData[0]), int(objectPointData[1])], bool(int(objectPointData[2])), True, True, True, int(objectPointData[3]), True)
                 percent = ((objectPointList.index(objectPointDataChunk)+len(pointList)) / (total))*100
                 statusText = "Loading " + str(int(percent)) + "%"
-                Render()
+                statusBar['text'] = statusText
+                window.update()
 
             for stickDataChunk in stickList:
                 stickData = stickDataChunk.split(',')
@@ -1000,7 +1057,8 @@ def LoadFromFile(event=None):
                     stickClass(combined[int(stickData[0])], combined[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
                 percent = ((stickList.index(stickDataChunk)+len(pointList)+len(objectPointList)) / (total))*100
                 statusText = "Loading " + str(int(percent)) + "%"
-                Render()
+                statusBar['text'] = statusText
+                window.update()
 
             for objectPoint in objectPoints:
                 if objectPoint.newlySpawned == True:
@@ -1075,7 +1133,7 @@ def Simulate():
 
 # ------------[INTERACT]------------
 def Interact():
-    global heldPoint, grabPoint
+    global heldPoint, grabPoint, dragDeleting, lastMousePos
 
     if not heldPoint == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
@@ -1090,6 +1148,16 @@ def Interact():
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         grabPoint.position = [mouseX, mouseY]
+
+    if dragDeleting:
+        mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
+        mouseY = int(window.winfo_pointery()-window.winfo_rooty())
+
+        for stick in sticks:
+            if Intersect2D(lastMousePos, [mouseX, mouseY], stick.pointA.position, stick.pointB.position):
+                stick.Remove()
+        
+        lastMousePos = [mouseX, mouseY]
 
 # ------------[INTERACT]------------
 
