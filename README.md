@@ -13,23 +13,20 @@ Read the controls then feel free to open one of the example maps.
 
 
 ### Future
-- More demo maps
-- UI for selecting stick types, load maps, etc
-- Better and more comments in the code
-- Colour scheme, etc for visual aesthetic
-- New Stick and Point types (slider, motor, etc)
+- Motor Point / Stick types
 - Camera control (zooming + movement)
-- More example maps
+- Water / Sand / Particle Sim
+- Inter-Collision
 ------------
 
 
 ### Issues (In order of importance)
 - Can still make actions while saving/loading
 - Not clear on how to use
-- Needs commenting
+- Code needs commenting
 - Rendering Performance
 - Simulation Performance
-- Dodgy cleanup/reset code
+- Slow cleanup/reset code
 -------------
 
 ![helloworldcontraption](https://user-images.githubusercontent.com/33568643/132953990-c72c696e-0d71-4939-9521-ccdd8857990b.jpg)
