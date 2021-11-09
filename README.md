@@ -1,5 +1,8 @@
+![Python](https://img.shields.io/badge/Python-3670A0?style=flatsquare&logo=python&logoColor=ffdd54)
+![TKinter](https://img.shields.io/badge/TKinter-3670A0?style=flatsquare&logo=python&logoColor=ffdd54)
+
 ### Overview
-This is a Tkinter based cloth/rope simulator in python. This is more of an experiment but feel free to improve upon the code.
+This is a Tkinter based cloth/rope simulator in python. Performance needs work on, and any help with issues would be appreciated :)
 
 ------------
 
