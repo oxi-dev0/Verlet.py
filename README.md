@@ -1,12 +1,22 @@
 <p align="center">
-    <img src="https://github.com/oxi-dev0/TkinterPhysicsSim/blob/main/Images/FrontImage.jpg" width=500> <br><br>
-    <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
-    <img src="https://img.shields.io/github/downloads/oxi-dev0/TkinterPhysicsSim/total" alt="Downloads">
+    <a href="#">
+        <img src="https://github.com/oxi-dev0/TkinterPhysicsSim/blob/main/Images/FrontImage.jpg" width=500> <br><br>
+    </a>
+    <a href="#">
+        <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
+    </a>
+    <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/releases">
+        <img src="https://img.shields.io/github/downloads/oxi-dev0/TkinterPhysicsSim/total" alt="Downloads">
+    </a>
     <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/issues">
         <img src="https://img.shields.io/github/issues/oxi-dev0/TkinterPhysicsSim" alt="Issues">
     </a>
-    <img src="https://img.shields.io/github/forks/oxi-dev0/TkinterPhysicsSim" alt="Forks">
-    <img src="https://img.shields.io/github/stars/oxi-dev0/TkinterPhysicsSim" alt="Stars">
+    <a href="#">
+        <img src="https://img.shields.io/github/forks/oxi-dev0/TkinterPhysicsSim" alt="Forks">
+    </a>
+    <a href="#">
+        <img src="https://img.shields.io/github/stars/oxi-dev0/TkinterPhysicsSim" alt="Stars">
+    </a>
     <a href="https://en.wikipedia.org/wiki/MIT_License">
         <img src="https://img.shields.io/github/license/oxi-dev0/TkinterPhysicsSim" alt="License">
     </a>
@@ -39,6 +49,8 @@ This is a Tkinter based cloth/rope simulator in python. Performance needs work o
 
 
 <p align="center">
-    <img src="https://user-images.githubusercontent.com/33568643/132953990-c72c696e-0d71-4939-9521-ccdd8857990b.jpg" width=500>
+    <a href="#">
+        <img src="https://user-images.githubusercontent.com/33568643/132953990-c72c696e-0d71-4939-9521-ccdd8857990b.jpg" width=500>
+    </a>
  </p>
 
