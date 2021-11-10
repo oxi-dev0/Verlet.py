@@ -1,7 +1,5 @@
+<h1 align="center"> TKinter Physics Sim </h2>
 <p align="center">
-    <a href="#">
-        <img src="https://github.com/oxi-dev0/TkinterPhysicsSim/blob/main/Images/FrontImage.jpg" width=500> <br><br>
-    </a>
     <a href="#">
         <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
     </a>
@@ -25,11 +23,7 @@
     </a>
 </p>
 
-### Overview
-This is a Tkinter based cloth/rope simulator in python. Performance needs work on, and any help with issues would be appreciated :)
-
-------------
-
+<h3 align="center"> A simple Tkinter-based simulation toy </h3>
 
 ### Installation / Running
 1. Install python 3.xx
