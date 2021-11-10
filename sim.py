@@ -223,12 +223,13 @@ class Point(object):
             self.position[1] += gravity * delta * delta
 
             # Window Collision
-            if windowCollide:
+            if windowCollide and len(self.references) == 0:
                 self.position[0] = Clamp(self.position[0], 10, window.winfo_width()-10)
-
+                self.position[1] = Clamp(self.position[1], 10, window.winfo_height()-30)
+            
+            if windowCollide:
                 if self.position[1] > window.winfo_height()-30:
                     self.position = Subtract2D(self.position, Divide2DByFloat(posdelta, 3))
-                self.position[1] = Clamp(self.position[1], 10, window.winfo_height()-30)
 
             self.previousPosition = posBefore
 
@@ -332,17 +333,30 @@ class Stick:
             txt += str(data) + ","
         return txt[:-1]
 
-    def Simulate(self):
+    def Simulate(self, onlyClamp=False):
+        global windowCollide
         # Calculate stick data
-        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
-        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+        if not onlyClamp:
+            stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
+            stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
 
         if not self.pointA.locked:
             # Push point A to be restrained by stick length
-            self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+            if not onlyClamp:
+                self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+
+            if windowCollide:
+                self.pointA.position[0] = Clamp(self.pointA.position[0], 10, window.winfo_width()-10)
+                self.pointA.position[1] = Clamp(self.pointA.position[1], 10, window.winfo_height()-30)
         if not self.pointB.locked:
             # Push point B to be restrained by stick length
-            self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+            if not onlyClamp:
+                self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+
+            if windowCollide:
+                self.pointB.position[0] = Clamp(self.pointB.position[0], 10, window.winfo_width()-10)
+                self.pointB.position[1] = Clamp(self.pointB.position[1], 10, window.winfo_height()-30)
+
 
 class WeakStick(Stick):
     def CalcColour(self):
@@ -361,22 +375,14 @@ class WeakStick(Stick):
 
 
     def Simulate(self):
-        global weakStickStrength
-        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
-        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+        global weakStickStrength     
+        super().Simulate()
 
         if Distance2D(self.pointA.position, self.pointB.position) > self.length + weakStickStrength:
             self.Break()
 
         if Distance2D(self.pointA.position, self.pointB.position) < self.length - weakStickStrength:
             self.Break()
-
-        if not self.pointA.locked:
-            # Push point A to be restrained by stick length
-            self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
-        if not self.pointB.locked:
-            # Push point B to be restrained by stick length
-            self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
 
 
 class RopeStick(Stick):
@@ -389,21 +395,11 @@ class RopeStick(Stick):
     def Simulate(self):
         global canvas
 
-        # Calculate stick data
-        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
-        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
-
         if hasattr(self, 'renderObject'):
             canvas.itemconfig(self.renderObject, fill=self.CalcColour())
 
         currentLength = Distance2D(self.pointA.position, self.pointB.position)
-        if currentLength > self.length:
-            if not self.pointA.locked:
-                # Push point A to be restrained by stick length
-                self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
-            if not self.pointB.locked:
-                # Push point B to be restrained by stick length
-                self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+        super().Simulate(not currentLength > self.length)
 
 class SlideStick(Stick):
     def __init__(self, tpointA, tpointB, tlength, tbackground, render=True):
@@ -445,15 +441,7 @@ class SlideStick(Stick):
         # middlePoint = pointA + projected
         self.middlePoint.position = Add2D(self.pointA.position, projected)
 
-        stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
-        stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
-
-        if not self.pointA.locked:
-            # Push point A to be restrained by stick length
-            self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
-        if not self.pointB.locked:
-            # Push point B to be restrained by stick length
-            self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+        super().Simulate()
 
     def Remove(self):
         global canvas, sticks
@@ -681,20 +669,20 @@ def Mouse1UpHandler(event):
     heldPoint = 0
     leftMouseDown = False
 
-def Mouse2DownHandler(event, shift=False, ctrl=False):
+def Mouse2DownHandler(event, shift=False, alt=False):
     global rightMouseDown, window, prevPoint, shiftHeld, canClick, selectedStick, dragDeleting, lastMousePos
 
     stickType = 0
-    if ctrl:
+    if shift:
         stickType = 1
 
-    if not rightMouseDown and canClick and not shift:
+    if not rightMouseDown and canClick and not alt:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPoint([mouseX, mouseY])
         TempStick(closest, [mouseX, mouseY], shift, selectedStick)
     
-    if not rightMouseDown and canClick and shift:
+    if not rightMouseDown and canClick and alt:
         dragDeleting = True
 
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
@@ -703,7 +691,7 @@ def Mouse2DownHandler(event, shift=False, ctrl=False):
 
     rightMouseDown = True
 
-def Mouse2UpHandler(event, shift=False, ctrl=False):
+def Mouse2UpHandler(event, shift=False, alt=False):
     global rightMouseDown, currentTempStick, shiftHeld, canClick, dragDeleting
 
     if canClick:
@@ -730,10 +718,10 @@ def ShiftDownHandler(event):
 def ShiftUpHandler(event):
     Mouse2UpHandler(event, True)
 
-def ControlDownHandler(event):
+def AltDownHandler(event):
     Mouse2DownHandler(event, False, True)
 
-def ControlUpHandler(event):
+def AltUpHandler(event):
     Mouse2UpHandler(event, False, True)
 
 # ----[SIMULATION RESET]----
@@ -1097,13 +1085,13 @@ window.bind("<ButtonPress-3>", Mouse2DownHandler)
 window.bind("<ButtonRelease-3>", Mouse2UpHandler)
 window.bind("<space>", SpaceHandler)
 window.bind("<Return>", LockHandler)
-window.bind("<Delete>", DeleteHandler)
+window.bind("r", DeleteHandler)
 window.bind("g", GridSpawnHandler)
 window.bind("p", PauseHandler)
 window.bind("<Shift-ButtonPress-3>", ShiftDownHandler)
 window.bind("<Shift-ButtonRelease-3>", ShiftUpHandler)
-window.bind("<Control-ButtonPress-3>", ControlDownHandler)
-window.bind("<Control-ButtonRelease-3>", ControlUpHandler)
+window.bind("<Alt-ButtonPress-3>", AltDownHandler)
+window.bind("<Alt-ButtonRelease-3>", AltUpHandler)
 window.bind("<Control-s>", SaveToFile)
 window.bind("<Control-Shift-s>", SaveToFileNoCurrent)
 window.bind("<Control-o>", LoadFromFile)
@@ -1243,7 +1231,8 @@ def ControlsLoseFocus(event):
     controlsPopup.focus_force()
 
 def SavePromptSave():
-    global savepromptreturn
+    global savepromptreturn, savepromptpopup
+    savepromptpopup.destroy()
     SaveToFile(None, True, SavePromptSaveFinished)
 
 def SavePromptSaveFinished():
@@ -1294,7 +1283,6 @@ def SavePrompt(returnFunc, returnNow=False, contin=False):
         savepromptpopup.protocol('WM_DELETE_WINDOW', SavePromptCancel)
     else:
         canClick = True
-        savepromptpopup.destroy()
         returnFunc(contin)
 
 def InfoWindow():
@@ -1395,7 +1383,7 @@ def ControlsWindow():
     controlsPopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
     controlsPopup.wm_title("Welcome")
 
-    label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n Delete - Delete closest point \n Shift + Right Click Drag - Slice joints \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
+    label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n R - Delete closest point \n Alt + Right Click Drag - Slice joints \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
     label.pack(side="top", fill="x", pady=20)
 
     button = ttk.Button(controlsPopup, text="Continue", command=controlsPopup.destroy)
@@ -1466,5 +1454,5 @@ while True:
 
     lastFrameTime = (time.time()*1000)
 
-    sleep(0.01)
+    sleep(0.000001)
 # MAIN LOOP
