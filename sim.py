@@ -36,6 +36,7 @@ stickThickness = 3
 # ------------[DATA]------------
 leftMouseDown = False
 rightMouseDown = False
+middleMouseDown = False
 mouseX = 0
 mouseY = 0
 lastFrameTime = 0
@@ -59,6 +60,9 @@ dragDeleting = False
 lastMousePos = [0,0]
 
 selectedStick = 0
+
+camPos = [0,0]
+camScale = 1
 # ------------[DATA]------------
 
 # ------------[GUI DATA]------------
@@ -82,6 +86,7 @@ sticksBeforeSim = []
 points = []
 objectPoints = []
 sticks = []
+backgroundDots = [[None] * 4] * 7
 # ------------[STORAGE]------------
 
 # ------------[VECTOR MATH FUNCTIONS]------------
@@ -158,7 +163,7 @@ def Intersect2D(p1, p2, p3, p4):
 # ------------[CLASSES]------------
 class Point(object):
     def __init__(self, pos, tlocked, render=True, join=True, tsave=True):
-        global canvas, circleRadius, points
+        global canvas, circleRadius, points, camPos
         self.position = pos
         self.previousPosition = pos
         self.locked = tlocked
@@ -170,7 +175,7 @@ class Point(object):
             colour = "pink"
 
         if render:
-            self.renderObject = canvas.create_oval(pos[0]-circleRadius, pos[1]-circleRadius, pos[0]+circleRadius, pos[1]+circleRadius, fill=colour)
+            self.renderObject = canvas.create_oval(pos[0]-circleRadius-camPos[0], pos[1]-circleRadius-camPos[1], pos[0]+circleRadius-camPos[0], pos[1]+circleRadius-camPos[1], fill=colour)
             canvas.tag_raise(self.renderObject)
             if join:
                 points.append(self)
@@ -207,7 +212,7 @@ class Point(object):
         return txt[:-1]
 
     def Simulate(self):
-        global gravity, windowCollide
+        global gravity, windowCollide, camPos
 
         if not self.locked:
             posBefore = self.position
@@ -224,11 +229,11 @@ class Point(object):
 
             # Window Collision
             if windowCollide and len(self.references) == 0:
-                self.position[0] = Clamp(self.position[0], 10, window.winfo_width()-10)
-                self.position[1] = Clamp(self.position[1], 10, window.winfo_height()-30)
+                self.position[0] = Clamp(self.position[0], 10+camPos[0], window.winfo_width()-10+camPos[0])
+                self.position[1] = Clamp(self.position[1], 10+camPos[1], window.winfo_height()-30+camPos[1])
             
             if windowCollide:
-                if self.position[1] > window.winfo_height()-30:
+                if self.position[1] > window.winfo_height()-30+camPos[1]:
                     self.position = Subtract2D(self.position, Divide2DByFloat(posdelta, 3))
 
             self.previousPosition = posBefore
@@ -283,7 +288,7 @@ class ObjectPoint(Point):
 
 class Stick:
     def __init__(self, tpointA, tpointB, tlength, tbackground, render=True, standin=False, tsave=True, tstickType=0):
-        global canvas, sticks, stickThickness
+        global canvas, sticks, stickThickness, camPos
         self.pointA = tpointA
         self.pointB = tpointB
 
@@ -302,7 +307,7 @@ class Stick:
 
         if not standin:
             if render:
-                self.renderObject = canvas.create_line(self.pointA.position[0], self.pointA.position[1], self.pointB.position[0], self.pointB.position[1], width=stickThickness, fill=colour)
+                self.renderObject = canvas.create_line(self.pointA.position[0] - camPos[0], self.pointA.position[1] - camPos[1], self.pointB.position[0] - camPos[0], self.pointB.position[1] - camPos[1], width=stickThickness, fill=colour)
                 canvas.tag_lower(self.renderObject)
 
             sticks.append(self)
@@ -334,7 +339,7 @@ class Stick:
         return txt[:-1]
 
     def Simulate(self, onlyClamp=False):
-        global windowCollide
+        global windowCollide, camPos
         # Calculate stick data
         if not onlyClamp:
             stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
@@ -346,16 +351,16 @@ class Stick:
                 self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
 
             if windowCollide:
-                self.pointA.position[0] = Clamp(self.pointA.position[0], 10, window.winfo_width()-10)
-                self.pointA.position[1] = Clamp(self.pointA.position[1], 10, window.winfo_height()-30)
+                self.pointA.position[0] = Clamp(self.pointA.position[0], 10+camPos[0], window.winfo_width()-10+camPos[0])
+                self.pointA.position[1] = Clamp(self.pointA.position[1], 10+camPos[1], window.winfo_height()-30+camPos[1])
         if not self.pointB.locked:
             # Push point B to be restrained by stick length
             if not onlyClamp:
                 self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
 
             if windowCollide:
-                self.pointB.position[0] = Clamp(self.pointB.position[0], 10, window.winfo_width()-10)
-                self.pointB.position[1] = Clamp(self.pointB.position[1], 10, window.winfo_height()-30)
+                self.pointB.position[0] = Clamp(self.pointB.position[0], 10+camPos[0], window.winfo_width()-10+camPos[0])
+                self.pointB.position[1] = Clamp(self.pointB.position[1], 10+camPos[1], window.winfo_height()-30+camPos[1])
 
 
 class WeakStick(Stick):
@@ -476,7 +481,7 @@ class SlideStick(Stick):
 
 class TempStick:
     def __init__(self, tpointA, mousePos, tbackground, ttype):
-        global canvas, sticks, currentTempStick, stickThickness
+        global canvas, sticks, currentTempStick, stickThickness, camPos
         self.pointA = tpointA
 
         colour = "black"
@@ -486,7 +491,7 @@ class TempStick:
             colour = "purple"
 
         self.background = tbackground
-        self.renderObject = canvas.create_line(self.pointA.position[0], self.pointA.position[1], mousePos[0], mousePos[1], width=stickThickness, fill=colour)
+        self.renderObject = canvas.create_line(self.pointA.position[0] - camPos[0], self.pointA.position[1] - camPos[1], mousePos[0], mousePos[1], width=stickThickness, fill=colour)
         currentTempStick = self
 
     def Cleanup(self):
@@ -498,18 +503,18 @@ class TempStick:
 
 # ------------[UTIL FUNCTIONS]------------
 def GetClosestPoint(pos):
-    global points, objectPoints
+    global points, objectPoints, camPos
 
     closest = 0
     closestDist = 1000000
     for point in points:
-        if Distance2D(pos, point.position) < closestDist:
+        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist:
             closest = point
-            closestDist = Distance2D(pos, point.position)
+            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
     for point in objectPoints:
-        if Distance2D(pos, point.position) < closestDist:
+        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist:
             closest = point
-            closestDist = Distance2D(pos, point.position)
+            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
 
     return closest
 
@@ -519,18 +524,18 @@ def GetClosestPointThreshold(pos, thresh):
     closest = 0
     closestDist = 1000000
     for point in points:
-        if Distance2D(pos, point.position) < closestDist and Distance2D(pos, point.position) < thresh:
+        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist and Distance2D(pos, Subtract2D(point.position, camPos)) < thresh:
             closest = point
-            closestDist = Distance2D(pos, point.position)
+            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
     for point in objectPoints:
-        if Distance2D(pos, point.position) < closestDist and Distance2D(pos, point.position) < thresh:
+        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist and Distance2D(pos, Subtract2D(point.position, camPos)) < thresh:
             closest = point
-            closestDist = Distance2D(pos, point.position)
+            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
 
     return closest
 
 def Clear(overrideClick=False):
-    global statusText, canClick
+    global statusText, canClick, camPos
 
     if canClick or overrideClick:
         canClick = False
@@ -539,6 +544,8 @@ def Clear(overrideClick=False):
             point.Remove()
 
         sleep(0.1)
+
+        camPos = [0,0]
 
         for point in points:
             canvas.delete(point.renderObject)
@@ -631,20 +638,20 @@ def PointTypeClass(classNum):
 
 # ------------[INPUT HANDLERS]------------
 def Mouse1DownHandler(event):
-    global leftMouseDown, window, prevPoint, heldPoint, simNow, grabPoint, canClick
+    global leftMouseDown, window, prevPoint, heldPoint, simNow, grabPoint, canClick, camPos
 
     if not leftMouseDown and canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         closest = GetClosestPointThreshold([mouseX, mouseY], circleRadius * 5)
         if closest == 0:
-            newPoint = Point([mouseX, mouseY], False)
+            newPoint = Point([mouseX + camPos[0], mouseY + camPos[1]], False)
             prevPoint = newPoint
         else:
             if closest.locked == True or simNow == False:
                 heldPoint = closest
             elif simNow == True:
-                grabPoint = Point([mouseX, mouseY], True, False, False)
+                grabPoint = Point([mouseX + camPos[0], mouseY + camPos[1]], True, False, False)
                 Stick(grabPoint, closest, Distance2D(grabPoint.position, closest.position), False, False)
 
     leftMouseDown = True
@@ -711,6 +718,18 @@ def Mouse2UpHandler(event, shift=False, alt=False):
         currentTempStick.Cleanup()
 
     rightMouseDown = False
+
+def MiddleMouseDownHandler(event):
+    global middleMouseDown, lastMousePos
+    middleMouseDown = True
+
+    mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
+    mouseY = int(window.winfo_pointery()-window.winfo_rooty())
+    lastMousePos = [mouseX, mouseY]
+
+def MiddleMouseUpHandler(event):
+    global middleMouseDown
+    middleMouseDown = False
 
 def ShiftDownHandler(event):
     Mouse2DownHandler(event, True)
@@ -994,7 +1013,7 @@ def SaveToFileNoCurrent():
     SaveToFile(None, False)
 
 def LoadFromFile(event=None):
-    global points, sticks, simNow, pauseSim, statusText, canClick, gravity, numIterations, currentFile, objectPoints
+    global points, sticks, simNow, pauseSim, statusText, canClick, gravity, numIterations, currentFile, objectPoints, camPos
 
     if canClick:
         simNow = False
@@ -1083,6 +1102,8 @@ window.bind("<ButtonPress-1>", Mouse1DownHandler)
 window.bind("<ButtonRelease-1>", Mouse1UpHandler)
 window.bind("<ButtonPress-3>", Mouse2DownHandler)
 window.bind("<ButtonRelease-3>", Mouse2UpHandler)
+window.bind("<ButtonPress-2>", MiddleMouseDownHandler)
+window.bind("<ButtonRelease-2>", MiddleMouseUpHandler)
 window.bind("<space>", SpaceHandler)
 window.bind("<Return>", LockHandler)
 window.bind("r", DeleteHandler)
@@ -1121,12 +1142,12 @@ def Simulate():
 
 # ------------[INTERACT]------------
 def Interact():
-    global heldPoint, grabPoint, dragDeleting, lastMousePos
+    global heldPoint, grabPoint, dragDeleting, lastMousePos, camPos
 
     if not heldPoint == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        heldPoint.position = [mouseX, mouseY]
+        heldPoint.position = [mouseX + camPos[0], mouseY + camPos[1]]
         if not simNow:
             for ref in heldPoint.references:
                 if ref.__class__.__name__ == "SlideStick":
@@ -1135,34 +1156,43 @@ def Interact():
     if not grabPoint == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        grabPoint.position = [mouseX, mouseY]
+        grabPoint.position = [mouseX + camPos[0], mouseY + camPos[1]]
 
     if dragDeleting:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
 
         for stick in sticks:
-            if Intersect2D(lastMousePos, [mouseX, mouseY], stick.pointA.position, stick.pointB.position):
+            if Intersect2D(lastMousePos, [mouseX, mouseY], Subtract2D(stick.pointA.position,camPos), Subtract2D(stick.pointB.position, camPos)):
                 stick.Remove()
         
+        lastMousePos = [mouseX, mouseY]
+    
+    if middleMouseDown:
+        mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
+        mouseY = int(window.winfo_pointery()-window.winfo_rooty())
+
+        camPos[0] += lastMousePos[0] - mouseX
+        camPos[1] += lastMousePos[1] - mouseY
+
         lastMousePos = [mouseX, mouseY]
 
 # ------------[INTERACT]------------
 
 # ------------[RENDER]------------
 def Render():
-    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile, objectPoints, sticks
+    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile, objectPoints, sticks, camPos, backgroundDots
 
     # Update each point and stick's location
 
     for stick in sticks:
         if hasattr(stick, 'renderObject'):
-            canvas.coords(stick.renderObject, stick.pointA.position[0], stick.pointA.position[1], stick.pointB.position[0], stick.pointB.position[1])
+            canvas.coords(stick.renderObject, stick.pointA.position[0] - camPos[0], stick.pointA.position[1] - camPos[1], stick.pointB.position[0] - camPos[0], stick.pointB.position[1] - camPos[1])
 
     for point in points:
-        canvas.coords(point.renderObject, point.position[0]-circleRadius, point.position[1]-circleRadius, point.position[0]+circleRadius, point.position[1]+circleRadius)
+        canvas.coords(point.renderObject, point.position[0]-circleRadius - camPos[0], point.position[1]-circleRadius - camPos[1], point.position[0]+circleRadius - camPos[0], point.position[1]+circleRadius - camPos[1])
     for point in objectPoints:
-        canvas.coords(point.renderObject, point.position[0]-circleRadius, point.position[1]-circleRadius, point.position[0]+circleRadius, point.position[1]+circleRadius)
+        canvas.coords(point.renderObject, point.position[0]-circleRadius - camPos[0], point.position[1]-circleRadius - camPos[1], point.position[0]+circleRadius - camPos[0], point.position[1]+circleRadius - camPos[1])
 
     # Update Statusbar
     statusBar['text'] = statusText
@@ -1171,10 +1201,10 @@ def Render():
     if not currentTempStick == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        canvas.coords(currentTempStick.renderObject, currentTempStick.pointA.position[0], currentTempStick.pointA.position[1], mouseX, mouseY)
+        canvas.coords(currentTempStick.renderObject, currentTempStick.pointA.position[0] - camPos[0], currentTempStick.pointA.position[1] - camPos[1], mouseX, mouseY)
 
     # Update FPS Counter
-    canvas.itemconfigure(fpsText, text=str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)))
+    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)) + " - Camera X: " + str(camPos[0]) + ", Y: " + str(-camPos[1]))
 
     canvas.itemconfigure(selectedStickText, text="Selected Joint Type (1/2/3/4): " + StickTypeName(selectedStick))
 
@@ -1435,7 +1465,7 @@ window.config(menu=menubar)
 statusBar = tk.Label(window, text="Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
 statusBar.pack(side=tk.BOTTOM, fill=tk.X)
 
-fpsText = canvas.create_text(20, 15, fill="black", text="0")
+fpsText = canvas.create_text(15, 15, fill="black", text="0", anchor="w")
 selectedStickText = canvas.create_text(15, 33, fill="black", text="Current Stick: ", anchor="w")
 
 Render()
