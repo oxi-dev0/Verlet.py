@@ -1,4 +1,4 @@
-<h1 align="center"> TKinter Physics Sim </h2>
+<h1 align="center"> Python TKinter Verlet Integration </h2>
 <p align="center">
     <a href="#">
         <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
@@ -23,7 +23,7 @@
     </a>
 </p>
 
-<h3 align="center"> A simple Tkinter-based simulation toy </h3>
+<h3 align="center"> A simple Python-Tkinter Verlet simulation toy </h3>
 
 ### Installation / Running
 1. Install python 3.xx
@@ -36,7 +36,7 @@
 
 
 ### Future
-- Motor Point / Stick types
+- Powered Joints (Motors, Pistons, etc)
 - Water / Sand / Particle Sim
 - Inter-Collision
 ------------
