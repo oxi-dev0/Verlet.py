@@ -1,4 +1,4 @@
-<h1 align="center"> Python TKinter Verlet Integration </h2>
+<h1 align="center"> TKinter Verlet Integration </h2>
 <p align="center">
     <a href="#">
         <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
