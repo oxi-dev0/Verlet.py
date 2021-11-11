@@ -32,10 +32,11 @@
 <h3 align="center"> A Verlet simulation toy in Python </h3>
 
 ### Installation / Running
-1. Install python 3.xx
-2. Install tkinter (`pip3 install tkinter`)
-3. Run sim.py
-4. Read controls then play around and feel free to open demo maps (File > Open)
+1. [Download](https://github.com/oxi-dev0/Verlet.py/releases)
+2. Install python 3.xx
+3. Install tkinter (`pip3 install tkinter`)
+4. Run sim.py
+5. Read controls then play around and feel free to open demo maps (File > Open)
 
 ------------
 
