@@ -7,6 +7,7 @@ from tkinter import ttk
 from time import sleep
 import time
 import os
+from vector2d import Vector2D
 
 window = tk.Tk()
 window.title("TKinter Physics Sim - V1")
@@ -57,11 +58,11 @@ currentFile = ""
 simColour = True
 
 dragDeleting = False
-lastMousePos = [0,0]
+lastMousePos = Vector2D.Zero()
 
 selectedStick = 0
 
-camPos = [0,0]
+camPos = Vector2D.Zero()
 camScale = 1
 # ------------[DATA]------------
 
@@ -86,79 +87,7 @@ sticksBeforeSim = []
 points = []
 objectPoints = []
 sticks = []
-backgroundDots = [[None] * 4] * 7
 # ------------[STORAGE]------------
-
-# ------------[VECTOR MATH FUNCTIONS]------------
-def Distance2D(pos1, pos2):
-    return math.sqrt(((pos2[0]-pos1[0])**2)+((pos2[1]-pos1[1])**2))
-
-def Add2D(pos1, pos2):
-    return [pos1[0] + pos2[0], pos1[1] + pos2[1]]
-
-def Subtract2D(pos1, pos2):
-    return [pos1[0] - pos2[0], pos1[1] - pos2[1]]
-
-def Divide2D(pos1, pos2):
-    return [pos1[0]/pos2[0], pos1[1]/pos2[1]]
-
-def Multiply2D(pos1, pos2):
-    return [pos1[0]*pos2[0], pos1[1]*pos2[1]]
-
-def Divide2DByFloat(vect, flt):
-    return [vect[0]/flt, vect[1]/flt]
-
-def Multiply2DByFloat(vect, flt):
-    return [vect[0]*flt, vect[1]*flt]
-
-def Length2D(vect):
-    return math.sqrt((vect[0] * vect[0]) + (vect[1] * vect[1]))
-
-def Normalize2D(vect):
-    length = Length2D(vect)
-    if length == 0:
-        return [0, 0]
-    return [vect[0]/length, vect[1]/length]
-
-def DotProduct2D(a, b):
-    return a[0] * b[0] + a[1] * b[1]
-
-def Project2D(a, b):
-    normB = Normalize2D(b)
-    return Multiply2DByFloat(normB, DotProduct2D(a, normB))
-
-def ParseInt2D(a):
-    return [int(a[0]), int(a[1])]
-
-def OnSegment2D(p1, p2, p):
-    return min(p1[0], p2[0]) <= p[0] <= max(p1[0], p2[0]) and min(p1[1], p2[1]) <= p[1] <= max(p1[1], p2[1])
-
-def CrossProduct2D(a, b):
-    return a[0]*b[1] - a[1]*b[0]
-
-def Direction2D(p1, p2, p3):
-	return CrossProduct2D(Subtract2D(p3, p1), Subtract2D(p2, p1))
-
-def Intersect2D(p1, p2, p3, p4):
-    d1 = Direction2D(p3, p4, p1)
-    d2 = Direction2D(p3, p4, p2)
-    d3 = Direction2D(p1, p2, p3)
-    d4 = Direction2D(p1, p2, p4)
-
-    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
-        return True
-
-    elif d1 == 0 and OnSegment2D(p3, p4, p1):
-        return True
-    elif d2 == 0 and OnSegment2D(p3, p4, p2):
-        return True
-    elif d3 == 0 and OnSegment2D(p1, p2, p3):
-        return True
-    elif d4 == 0 and OnSegment2D(p1, p2, p4):
-        return True
-    else:
-        return False
-# ------------[VECTOR MATH FUNCTIONS]------------
 
 # ------------[CLASSES]------------
 class Point(object):
@@ -175,7 +104,7 @@ class Point(object):
             colour = "pink"
 
         if render:
-            self.renderObject = canvas.create_oval(pos[0]-circleRadius-camPos[0], pos[1]-circleRadius-camPos[1], pos[0]+circleRadius-camPos[0], pos[1]+circleRadius-camPos[1], fill=colour)
+            self.renderObject = canvas.create_oval(pos.x-circleRadius-camPos.x, pos.y-circleRadius-camPos.y, pos.x+circleRadius-camPos.x, pos.y+circleRadius-camPos.y, fill=colour)
             canvas.tag_raise(self.renderObject)
             if join:
                 points.append(self)
@@ -206,7 +135,7 @@ class Point(object):
 
     def Parse(self):
         txt = ""
-        dataCache = [self.position[0], self.position[1], int(self.locked)]
+        dataCache = [self.position.x, self.position.y, int(self.locked)]
         for data in dataCache:
             txt += str(data)+ ","
         return txt[:-1]
@@ -218,23 +147,23 @@ class Point(object):
             posBefore = self.position
 
             # Keep velocity from last update
-            posdelta = Subtract2D(self.position, self.previousPosition)
-            self.position = Add2D(self.position, posdelta)
+            posdelta = (self.position - self.previousPosition)
+            self.position = self.position + posdelta
 
             # Calculate frame delta time
             delta = (time.time()*1000)-lastFrameTime
 
             # Simulate Gravity based upon frame time
-            self.position[1] += gravity * delta * delta
+            self.position.y += gravity * delta * delta
 
             # Window Collision
             if windowCollide and len(self.references) == 0:
-                self.position[0] = Clamp(self.position[0], 10+camPos[0], window.winfo_width()-10+camPos[0])
-                self.position[1] = Clamp(self.position[1], 10+camPos[1], window.winfo_height()-30+camPos[1])
+                self.position.x = Clamp(self.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
+                self.position.y = Clamp(self.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
             
             if windowCollide:
-                if self.position[1] > window.winfo_height()-30+camPos[1]:
-                    self.position = Subtract2D(self.position, Divide2DByFloat(posdelta, 3))
+                if self.position.y > window.winfo_height()-30+camPos.y:
+                    self.position = (self.position - (posdelta / 3))
 
             self.previousPosition = posBefore
 
@@ -252,7 +181,7 @@ class ObjectPoint(Point):
         colour = "red"
 
         if render:
-            self.renderObject = canvas.create_oval(pos[0]-circleRadius, pos[1]-circleRadius, pos[0]+circleRadius, pos[1]+circleRadius, fill=colour)
+            self.renderObject = canvas.create_oval(pos.x-circleRadius, pos.y-circleRadius, pos.x+circleRadius, pos.y+circleRadius, fill=colour)
             canvas.tag_raise(self.renderObject)
             if join:
                 objectPoints.append(self)
@@ -281,7 +210,7 @@ class ObjectPoint(Point):
     def Parse(self):
         global sticks
         txt = ""
-        dataCache = [self.position[0], self.position[1], int(self.locked), sticks.index(self.owner)]
+        dataCache = [self.position.x, self.position.y, int(self.locked), sticks.index(self.owner)]
         for data in dataCache:
             txt += str(data)+ ","
         return txt[:-1]
@@ -307,7 +236,7 @@ class Stick:
 
         if not standin:
             if render:
-                self.renderObject = canvas.create_line(self.pointA.position[0] - camPos[0], self.pointA.position[1] - camPos[1], self.pointB.position[0] - camPos[0], self.pointB.position[1] - camPos[1], width=stickThickness, fill=colour)
+                self.renderObject = canvas.create_line(self.pointA.position.x - camPos.x, self.pointA.position.y - camPos.y, self.pointB.position.x - camPos.x, self.pointB.position.y - camPos.y, width=stickThickness, fill=colour)
                 canvas.tag_lower(self.renderObject)
 
             sticks.append(self)
@@ -342,25 +271,25 @@ class Stick:
         global windowCollide, camPos
         # Calculate stick data
         if not onlyClamp:
-            stickCenter = Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2)
-            stickDir = Normalize2D(Subtract2D(self.pointA.position, self.pointB.position))
+            stickCenter = (self.pointA.position + self.pointB.position) / 2
+            stickDir = (self.pointA.position - self.pointB.position).getNormalised()
 
         if not self.pointA.locked:
             # Push point A to be restrained by stick length
             if not onlyClamp:
-                self.pointA.position = Add2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+                self.pointA.position = stickCenter + (stickDir * self.length/2)
 
             if windowCollide:
-                self.pointA.position[0] = Clamp(self.pointA.position[0], 10+camPos[0], window.winfo_width()-10+camPos[0])
-                self.pointA.position[1] = Clamp(self.pointA.position[1], 10+camPos[1], window.winfo_height()-30+camPos[1])
+                self.pointA.position.x = Clamp(self.pointA.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
+                self.pointA.position.y = Clamp(self.pointA.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
         if not self.pointB.locked:
             # Push point B to be restrained by stick length
             if not onlyClamp:
-                self.pointB.position = Subtract2D(stickCenter, Multiply2DByFloat(stickDir, self.length/2))
+                self.pointB.position = stickCenter - (stickDir * (self.length/2))
 
             if windowCollide:
-                self.pointB.position[0] = Clamp(self.pointB.position[0], 10+camPos[0], window.winfo_width()-10+camPos[0])
-                self.pointB.position[1] = Clamp(self.pointB.position[1], 10+camPos[1], window.winfo_height()-30+camPos[1])
+                self.pointB.position.x = Clamp(self.pointB.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
+                self.pointB.position.y = Clamp(self.pointB.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
 
 
 class WeakStick(Stick):
@@ -369,13 +298,13 @@ class WeakStick(Stick):
 
     def Break(self):
         # stickA + (normalize(stickB-stickA) * ((Distance(stickA, stickB)/2)+-10)
-        dist = Distance2D(self.pointA.position, self.pointB.position)/ 2
-        stickDir = Normalize2D(Subtract2D(self.pointB.position, self.pointA.position))
+        dist = Vector2D.Distance(self.pointA.position, self.pointB.position)/ 2
+        stickDir = ((self.pointB.position / self.pointA.position)).getNormalised()
 
-        newPoint = Point(Add2D(self.pointA.position, Multiply2DByFloat(stickDir, (dist-10))), False)
-        Stick(self.pointA, newPoint, Distance2D(self.pointA.position, newPoint.position), False)
-        newPoint = Point(Add2D(self.pointA.position, Multiply2DByFloat(stickDir, (dist+10))), False)
-        Stick(self.pointB, newPoint, Distance2D(self.pointB.position, newPoint.position), False)
+        newPoint = Point((self.pointA.position + (stickDir * (dist-10))), False)
+        Stick(self.pointA, newPoint, Vector2D.Distance(self.pointA.position, newPoint.position), False)
+        newPoint = Point((self.pointA.position + (stickDir * (dist+10))), False)
+        Stick(self.pointB, newPoint, Vector2D.Distance(self.pointB.position, newPoint.position), False)
         self.Remove()
 
 
@@ -383,16 +312,16 @@ class WeakStick(Stick):
         global weakStickStrength     
         super().Simulate()
 
-        if Distance2D(self.pointA.position, self.pointB.position) > self.length + weakStickStrength:
+        if Vector2D.Distance(self.pointA.position, self.pointB.position) > self.length + weakStickStrength:
             self.Break()
 
-        if Distance2D(self.pointA.position, self.pointB.position) < self.length - weakStickStrength:
+        if Vector2D.Distance(self.pointA.position, self.pointB.position) < self.length - weakStickStrength:
             self.Break()
 
 
 class RopeStick(Stick):
     def CalcColour(self):
-        if Distance2D(self.pointA.position, self.pointB.position) > self.length and simColour:
+        if Vector2D.Distance(self.pointA.position, self.pointB.position) > self.length and simColour:
             return "Blue"
         else:
             return "Purple"
@@ -403,14 +332,14 @@ class RopeStick(Stick):
         if hasattr(self, 'renderObject'):
             canvas.itemconfig(self.renderObject, fill=self.CalcColour())
 
-        currentLength = Distance2D(self.pointA.position, self.pointB.position)
+        currentLength = Vector2D.Distance(self.pointA.position, self.pointB.position)
         super().Simulate(not currentLength > self.length)
 
 class SlideStick(Stick):
     def __init__(self, tpointA, tpointB, tlength, tbackground, render=True):
         global canvas, sticks, stickThickness
 
-        self.middlePoint = ObjectPoint(ParseInt2D(Divide2DByFloat(Add2D(tpointA.position, tpointB.position), 2)), False, True, True, True)
+        self.middlePoint = ObjectPoint((((tpointA.position + tpointB.position) / 2)).AsInt(), False, True, True, True)
         self.stick1 = RopeStick(tpointA, self.middlePoint, tlength, False, True, False, False)
         self.stick2 = RopeStick(tpointB, self.middlePoint, tlength, False, True, False, False)
 
@@ -430,21 +359,21 @@ class SlideStick(Stick):
         sticks.append(self)
 
     def Simulate(self):
-        newDist = Distance2D(self.pointA.position, self.pointB.position)
+        newDist = Vector2D.Distance(self.pointA.position, self.pointB.position)
         self.stick1.length = newDist-10
         self.stick2.length = newDist-10
 
         self.stick1.Simulate()
         self.stick2.Simulate()
 
-        middlePointVect = Subtract2D(self.middlePoint.position, self.pointA.position)
-        stickVect = Subtract2D(self.pointA.position, self.pointB.position)
+        middlePointVect = (self.middlePoint.position - self.pointA.position)
+        stickVect = (self.pointA.position - self.pointB.position)
 
         # Project
-        projected = Project2D(middlePointVect, stickVect)
+        projected = Vector2D.Project(middlePointVect, stickVect)
 
         # middlePoint = pointA + projected
-        self.middlePoint.position = Add2D(self.pointA.position, projected)
+        self.middlePoint.position = (self.pointA.position + projected)
 
         super().Simulate()
 
@@ -477,7 +406,7 @@ class SlideStick(Stick):
         oldPoint.Remove(True)
 
     def CalcMiddlePoint(self):
-        self.middlePoint.position = ParseInt2D(Divide2DByFloat(Add2D(self.pointA.position, self.pointB.position), 2))
+        self.middlePoint.position = (((self.pointA.position + self.pointB.position) / 2)).AsInt()
 
 class TempStick:
     def __init__(self, tpointA, mousePos, tbackground, ttype):
@@ -491,7 +420,7 @@ class TempStick:
             colour = "purple"
 
         self.background = tbackground
-        self.renderObject = canvas.create_line(self.pointA.position[0] - camPos[0], self.pointA.position[1] - camPos[1], mousePos[0], mousePos[1], width=stickThickness, fill=colour)
+        self.renderObject = canvas.create_line(self.pointA.position.x - camPos.x, self.pointA.position.y - camPos.y, mousePos.x, mousePos.y, width=stickThickness, fill=colour)
         currentTempStick = self
 
     def Cleanup(self):
@@ -508,13 +437,13 @@ def GetClosestPoint(pos):
     closest = 0
     closestDist = 1000000
     for point in points:
-        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist:
+        if Vector2D.Distance(pos, point.position - camPos) < closestDist:
             closest = point
-            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
+            closestDist = Vector2D.Distance(pos, point.position - camPos)
     for point in objectPoints:
-        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist:
+        if Vector2D.Distance(pos, point.position - camPos) < closestDist:
             closest = point
-            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
+            closestDist = Vector2D.Distance(pos, point.position - camPos)
 
     return closest
 
@@ -524,13 +453,13 @@ def GetClosestPointThreshold(pos, thresh):
     closest = 0
     closestDist = 1000000
     for point in points:
-        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist and Distance2D(pos, Subtract2D(point.position, camPos)) < thresh:
+        if Vector2D.Distance(pos, point.position - camPos) < closestDist and Vector2D.Distance(pos, point.position - camPos) < thresh:
             closest = point
-            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
+            closestDist = Vector2D.Distance(pos, point.position - camPos)
     for point in objectPoints:
-        if Distance2D(pos, Subtract2D(point.position, camPos)) < closestDist and Distance2D(pos, Subtract2D(point.position, camPos)) < thresh:
+        if Vector2D.Distance(pos, point.position - camPos) < closestDist and Vector2D.Distance(pos, point.position - camPos) < thresh:
             closest = point
-            closestDist = Distance2D(pos, Subtract2D(point.position, camPos))
+            closestDist = Vector2D.Distance(pos, point.position - camPos)
 
     return closest
 
@@ -545,7 +474,7 @@ def Clear(overrideClick=False):
 
         sleep(0.1)
 
-        camPos = [0,0]
+        camPos = Vector2D.Zero()
 
         for point in points:
             canvas.delete(point.renderObject)
@@ -580,7 +509,7 @@ def CalculateMainCenter(width, height):
     global window
     x = window.winfo_x() + (window.winfo_width()/2) - (width/2)
     y = window.winfo_y() + (window.winfo_height()/2) - (height/2)
-    return [x, y]
+    return Vector2D(x,y)
 
 def ToggleWindowCollision():
     global windowCollide
@@ -643,16 +572,16 @@ def Mouse1DownHandler(event):
     if not leftMouseDown and canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        closest = GetClosestPointThreshold([mouseX, mouseY], circleRadius * 5)
+        closest = GetClosestPointThreshold(Vector2D(mouseX,mouseY), circleRadius * 5)
         if closest == 0:
-            newPoint = Point([mouseX + camPos[0], mouseY + camPos[1]], False)
+            newPoint = Point(Vector2D(mouseX + camPos.x, mouseY + camPos.y), False)
             prevPoint = newPoint
         else:
             if closest.locked == True or simNow == False:
                 heldPoint = closest
             elif simNow == True:
-                grabPoint = Point([mouseX + camPos[0], mouseY + camPos[1]], True, False, False)
-                Stick(grabPoint, closest, Distance2D(grabPoint.position, closest.position), False, False)
+                grabPoint = Point(Vector2D(mouseX + camPos.x, mouseY + camPos.y), True, False, False)
+                Stick(grabPoint, closest, Vector2D.Distance(grabPoint.position, closest.position), False, False)
 
     leftMouseDown = True
 
@@ -666,7 +595,7 @@ def Mouse1UpHandler(event):
             refIndex = 0
             referencesCopy = heldPoint.references.copy()
             while refIndex < len(referencesCopy):
-                referencesCopy[refIndex].length = Distance2D(referencesCopy[refIndex].pointA.position, referencesCopy[refIndex].pointB.position)
+                referencesCopy[refIndex].length = Vector2D.Distance(referencesCopy[refIndex].pointA.position, referencesCopy[refIndex].pointB.position)
                 refIndex += 1
 
         if not grabPoint == 0:
@@ -686,15 +615,15 @@ def Mouse2DownHandler(event, shift=False, alt=False):
     if not rightMouseDown and canClick and not alt:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        closest = GetClosestPoint([mouseX, mouseY])
-        TempStick(closest, [mouseX, mouseY], shift, selectedStick)
+        closest = GetClosestPoint(Vector2D(mouseX,mouseY))
+        TempStick(closest, Vector2D(mouseX,mouseY), shift, selectedStick)
     
     if not rightMouseDown and canClick and alt:
         dragDeleting = True
 
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        lastMousePos = [mouseX, mouseY]
+        lastMousePos = Vector2D(mouseX,mouseY)
 
     rightMouseDown = True
 
@@ -704,12 +633,12 @@ def Mouse2UpHandler(event, shift=False, alt=False):
     if canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        closest = GetClosestPoint([mouseX, mouseY])
+        closest = GetClosestPoint(Vector2D(mouseX,mouseY))
         if currentTempStick:
             if not closest == currentTempStick.pointA:
                 stickClass = None
                 stickClass = StickTypeClass(selectedStick)
-                newStick = stickClass(currentTempStick.pointA, closest, Distance2D(currentTempStick.pointA.position, closest.position), currentTempStick.background)
+                newStick = stickClass(currentTempStick.pointA, closest, Vector2D.Distance(currentTempStick.pointA.position, closest.position), currentTempStick.background)
         
 
     dragDeleting = False
@@ -725,7 +654,7 @@ def MiddleMouseDownHandler(event):
 
     mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
     mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-    lastMousePos = [mouseX, mouseY]
+    lastMousePos = Vector2D(mouseX,mouseY)
 
 def MiddleMouseUpHandler(event):
     global middleMouseDown
@@ -840,7 +769,7 @@ def LockHandler(event):
     if canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        closest = GetClosestPoint([mouseX, mouseY])
+        closest = GetClosestPoint(Vector2D(mouseX,mouseY))
         closest.ToggleLock()
 
 def DeleteHandler(event):
@@ -849,7 +778,7 @@ def DeleteHandler(event):
     if canClick:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        closest = GetClosestPoint([mouseX, mouseY])
+        closest = GetClosestPoint(Vector2D(mouseX,mouseY))
         heldPoint = 0
         closest.Remove()
 
@@ -866,14 +795,14 @@ def GridSpawnHandler(event):
             currentYPoints = []
             yIndex = 0
             for yIndex in range(gridY):
-                currentYPoints.append(Point([mouseX + (xIndex*60), mouseY + (yIndex*60)], False))
+                currentYPoints.append(Point(Vector2D(mouseX + (xIndex*60), mouseY + (yIndex*60)), False))
                 Render()
                 stickClass = StickTypeClass(selectedStick)
                 if not yIndex == 0:
-                    stickClass(currentYPoints[yIndex], currentYPoints[yIndex-1], Distance2D(currentYPoints[yIndex].position, currentYPoints[yIndex-1].position), False)
+                    stickClass(currentYPoints[yIndex], currentYPoints[yIndex-1], Vector2D.Distance(currentYPoints[yIndex].position, currentYPoints[yIndex-1].position), False)
                     Render()
                 if not xIndex == 0:
-                    stickClass(currentYPoints[yIndex], previousYPoints[yIndex], Distance2D(currentYPoints[yIndex].position, previousYPoints[yIndex].position), False)
+                    stickClass(currentYPoints[yIndex], previousYPoints[yIndex], Vector2D.Distance(currentYPoints[yIndex].position, previousYPoints[yIndex].position), False)
                     Render()
             previousYPoints = currentYPoints.copy()
             currentYPoints.clear()
@@ -1040,7 +969,7 @@ def LoadFromFile(event=None):
                 pointData = pointDataChunk.split(',')
                 #print(pointData)
                 if len(pointData) == 3:
-                    Point([int(pointData[0]), int(pointData[1])], bool(int(pointData[2])))
+                    Point(Vector2D(int(pointData[0]), int(pointData[1])), bool(int(pointData[2])))
                 percent = ((pointList.index(pointDataChunk)) / (total))*100
                 statusText = "Loading " + str(int(percent)) + "%"
                 statusBar['text'] = statusText
@@ -1049,7 +978,7 @@ def LoadFromFile(event=None):
             for objectPointDataChunk in objectPointList:
                 objectPointData = objectPointDataChunk.split(',')
                 if len(objectPointData) >= 3:
-                    ObjectPoint([int(objectPointData[0]), int(objectPointData[1])], bool(int(objectPointData[2])), True, True, True, int(objectPointData[3]), True)
+                    ObjectPoint(Vector2D(int(objectPointData[0]), int(objectPointData[1])), bool(int(objectPointData[2])), True, True, True, int(objectPointData[3]), True)
                 percent = ((objectPointList.index(objectPointDataChunk)+len(pointList)) / (total))*100
                 statusText = "Loading " + str(int(percent)) + "%"
                 statusBar['text'] = statusText
@@ -1147,7 +1076,7 @@ def Interact():
     if not heldPoint == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        heldPoint.position = [mouseX + camPos[0], mouseY + camPos[1]]
+        heldPoint.position = Vector2D(mouseX + camPos.x, mouseY + camPos.y)
         if not simNow:
             for ref in heldPoint.references:
                 if ref.__class__.__name__ == "SlideStick":
@@ -1156,26 +1085,26 @@ def Interact():
     if not grabPoint == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        grabPoint.position = [mouseX + camPos[0], mouseY + camPos[1]]
+        grabPoint.position = Vector2D(mouseX + camPos.x, mouseY + camPos.y)
 
     if dragDeleting:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
 
         for stick in sticks:
-            if Intersect2D(lastMousePos, [mouseX, mouseY], Subtract2D(stick.pointA.position,camPos), Subtract2D(stick.pointB.position, camPos)):
+            if Vector2D.isIntersecting(lastMousePos, Vector2D(mouseX,mouseY), (stick.pointA.position - camPos), (stick.pointB.position - camPos)):
                 stick.Remove()
         
-        lastMousePos = [mouseX, mouseY]
+        lastMousePos = Vector2D(mouseX,mouseY)
     
     if middleMouseDown:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
 
-        camPos[0] += lastMousePos[0] - mouseX
-        camPos[1] += lastMousePos[1] - mouseY
+        camPos.x += lastMousePos.x - mouseX
+        camPos.y += lastMousePos.y - mouseY
 
-        lastMousePos = [mouseX, mouseY]
+        lastMousePos = Vector2D(mouseX,mouseY)
 
 # ------------[INTERACT]------------
 
@@ -1184,15 +1113,14 @@ def Render():
     global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile, objectPoints, sticks, camPos, backgroundDots
 
     # Update each point and stick's location
-
     for stick in sticks:
         if hasattr(stick, 'renderObject'):
-            canvas.coords(stick.renderObject, stick.pointA.position[0] - camPos[0], stick.pointA.position[1] - camPos[1], stick.pointB.position[0] - camPos[0], stick.pointB.position[1] - camPos[1])
+            canvas.coords(stick.renderObject, stick.pointA.position.x - camPos.x, stick.pointA.position.y - camPos.y, stick.pointB.position.x - camPos.x, stick.pointB.position.y - camPos.y)
 
     for point in points:
-        canvas.coords(point.renderObject, point.position[0]-circleRadius - camPos[0], point.position[1]-circleRadius - camPos[1], point.position[0]+circleRadius - camPos[0], point.position[1]+circleRadius - camPos[1])
+        canvas.coords(point.renderObject, point.position.x-circleRadius - camPos.x, point.position.y-circleRadius - camPos.y, point.position.x+circleRadius - camPos.x, point.position.y+circleRadius - camPos.y)
     for point in objectPoints:
-        canvas.coords(point.renderObject, point.position[0]-circleRadius - camPos[0], point.position[1]-circleRadius - camPos[1], point.position[0]+circleRadius - camPos[0], point.position[1]+circleRadius - camPos[1])
+        canvas.coords(point.renderObject, point.position.x-circleRadius - camPos.x, point.position.y-circleRadius - camPos.y, point.position.x+circleRadius - camPos.x, point.position.y+circleRadius - camPos.y)
 
     # Update Statusbar
     statusBar['text'] = statusText
@@ -1201,10 +1129,10 @@ def Render():
     if not currentTempStick == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        canvas.coords(currentTempStick.renderObject, currentTempStick.pointA.position[0] - camPos[0], currentTempStick.pointA.position[1] - camPos[1], mouseX, mouseY)
+        canvas.coords(currentTempStick.renderObject, currentTempStick.pointA.position.x - camPos.x, currentTempStick.pointA.position.y - camPos.y, mouseX, mouseY)
 
     # Update FPS Counter
-    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)) + " - Camera X: " + str(camPos[0]) + ", Y: " + str(-camPos[1]))
+    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y))
 
     canvas.itemconfigure(selectedStickText, text="Selected Joint Type (1/2/3/4): " + StickTypeName(selectedStick))
 
@@ -1295,7 +1223,7 @@ def SavePrompt(returnFunc, returnNow=False, contin=False):
         height=100
         center = CalculateMainCenter(width, height)
 
-        savepromptpopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
+        savepromptpopup.geometry('%dx%d+%d+%d' % (width, height, center.x, center.y))
         savepromptpopup.wm_title("Alert")
 
         label = ttk.Label(savepromptpopup, text="You will lose your work if you dont save!")
@@ -1321,7 +1249,7 @@ def InfoWindow():
     popup.resizable(False, False)
     center = CalculateMainCenter(260, 100)
 
-    popup.geometry('%dx%d+%d+%d' % (260, 100, center[0], center[1]))
+    popup.geometry('%dx%d+%d+%d' % (260, 100, center.x, center.y))
     popup.wm_title("About")
     label = ttk.Label(popup, text="TKinter-based Physics Simulator. Written by Oxi.")
     label.pack(side="top", fill="x", pady=20)
@@ -1339,7 +1267,7 @@ def SimParamsWindow():
     height=100
     center = CalculateMainCenter(width, height)
 
-    simparampopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
+    simparampopup.geometry('%dx%d+%d+%d' % (width, height, center.x, center.y))
     simparampopup.wm_title("Sim Params")
 
 
@@ -1380,7 +1308,7 @@ def GridParamsWindow():
     height=60
     center = CalculateMainCenter(width, height)
 
-    gridparampopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
+    gridparampopup.geometry('%dx%d+%d+%d' % (width, height, center.x, center.y))
     gridparampopup.wm_title("Grid Params")
 
 
@@ -1410,7 +1338,7 @@ def ControlsWindow():
     height=390
     center = CalculateMainCenter(width, height)
 
-    controlsPopup.geometry('%dx%d+%d+%d' % (width, height, center[0], center[1]))
+    controlsPopup.geometry('%dx%d+%d+%d' % (width, height, center.x, center.y))
     controlsPopup.wm_title("Welcome")
 
     label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n R - Delete closest point \n Alt + Right Click Drag - Slice joints \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
