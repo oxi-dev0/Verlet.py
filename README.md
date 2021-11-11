@@ -1,5 +1,5 @@
 <p align="center">
-    <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/releases">
+    <a href="https://github.com/oxi-dev0/Verlet.py/releases">
         <img src="https://github.com/oxi-dev0/Verlet.py/blob/main/Images/Logo.png" width=350>
     </a>
 </p>
@@ -9,10 +9,10 @@
     <a href="#">
         <img src="https://img.shields.io/github/repo-size/oxi-dev0/Verlet.py" alt="Repo Size">
     </a>
-    <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/releases">
+    <a href="https://github.com/oxi-dev0/Verlet.py/releases">
         <img src="https://img.shields.io/github/downloads/oxi-dev0/Verlet.py/total" alt="Downloads">
     </a>
-    <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/issues">
+    <a href="https://github.com/oxi-dev0/Verlet.py/issues">
         <img src="https://img.shields.io/github/issues/oxi-dev0/Verlet.py" alt="Issues">
     </a>
     <a href="#">
