@@ -1,5 +1,7 @@
 <p align="center">
-    <img src="https://github.com/oxi-dev0/Verlet.py/blob/main/Images/Logo.png" width=350>
+    <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/releases">
+        <img src="https://github.com/oxi-dev0/Verlet.py/blob/main/Images/Logo.png" width=350>
+    </a>
 </p>
 
 <h1 align="center"> Verlet.py </h2>
