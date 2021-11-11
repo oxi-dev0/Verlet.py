@@ -1,29 +1,29 @@
 <p align="center">
-    <img src="https://github.com/oxi-dev0/Python-TKinter-Verlet/blob/main/Images/Logo.png" width=350>
+    <img src="https://github.com/oxi-dev0/Verlet.py/blob/main/Images/Logo.png" width=350>
 </p>
 
 <h1 align="center"> Verlet.py </h2>
 <p align="center">
     <a href="#">
-        <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
+        <img src="https://img.shields.io/github/repo-size/oxi-dev0/Verlet.py" alt="Repo Size">
     </a>
     <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/releases">
-        <img src="https://img.shields.io/github/downloads/oxi-dev0/TkinterPhysicsSim/total" alt="Downloads">
+        <img src="https://img.shields.io/github/downloads/oxi-dev0/Verlet.py/total" alt="Downloads">
     </a>
     <a href="https://github.com/oxi-dev0/TkinterPhysicsSim/issues">
-        <img src="https://img.shields.io/github/issues/oxi-dev0/TkinterPhysicsSim" alt="Issues">
+        <img src="https://img.shields.io/github/issues/oxi-dev0/Verlet.py" alt="Issues">
     </a>
     <a href="#">
-        <img src="https://img.shields.io/github/forks/oxi-dev0/TkinterPhysicsSim" alt="Forks">
+        <img src="https://img.shields.io/github/forks/oxi-dev0/Verlet.py" alt="Forks">
     </a>
     <a href="#">
-        <img src="https://img.shields.io/github/stars/oxi-dev0/TkinterPhysicsSim" alt="Stars">
+        <img src="https://img.shields.io/github/stars/oxi-dev0/Verlet.py" alt="Stars">
     </a>
     <a href="https://en.wikipedia.org/wiki/MIT_License">
-        <img src="https://img.shields.io/github/license/oxi-dev0/TkinterPhysicsSim" alt="License">
+        <img src="https://img.shields.io/github/license/oxi-dev0/Verlet.py" alt="License">
     </a>
-    <a href="https://twitter.com/intent/tweet?text=Check%20out%20this%20cool%20Tkinter%20physics%20sim%21%20https%3A%2F%2Fgithub.com%2Foxi-dev0%2FTkinterPhysicsSim%2F">
-      <img src="https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Foxi-dev0%2FTkinterPhysicsSim" alt="Tweet">
+    <a href="https://twitter.com/intent/tweet?text=Check%20out%20this%20cool%20Tkinter%20verlet%20sim%21%20https%3A%2F%2Fgithub.com%2Foxi-dev0%2Verlet.py%2F">
+      <img src="https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Foxi-dev0%2FVerlet.py" alt="Tweet">
     </a>
 </p>
 
