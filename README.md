@@ -1,4 +1,8 @@
-<h1 align="center"> TKinter Verlet Integration </h2>
+<p align="center">
+    <img src="https://github.com/oxi-dev0/Python-TKinter-Verlet/blob/main/Images/Logo.png" width=350>
+</p>
+
+<h1 align="center"> Verlet.py </h2>
 <p align="center">
     <a href="#">
         <img src="https://img.shields.io/github/repo-size/oxi-dev0/TkinterPhysicsSim" alt="Repo Size">
@@ -23,7 +27,7 @@
     </a>
 </p>
 
-<h3 align="center"> A simple Python-Tkinter Verlet simulation toy </h3>
+<h3 align="center"> A Verlet simulation toy in Python </h3>
 
 ### Installation / Running
 1. Install python 3.xx
