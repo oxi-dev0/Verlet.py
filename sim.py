@@ -8,6 +8,7 @@ from time import sleep
 import time
 import os
 from vector2d import Vector2D
+import platform
 
 window = tk.Tk()
 window.title("TKinter Physics Sim - V1")
@@ -42,6 +43,7 @@ mouseX = 0
 mouseY = 0
 lastFrameTime = 0
 prevPoint = 0
+snapResolution=10
 simNow = False
 currentTempStick = 0
 shiftHeld = False
@@ -70,10 +72,12 @@ camScale = 1
 grav=0
 iters=0
 weakstrength=0
+snapresolution=0
 gridx=0
 gridy=0
 simparampopup=0
 gridparampopup=0
+snapparampopup=0
 controlsPopup=0
 savepromptpopup=0
 savepromptreturn=None
@@ -93,8 +97,8 @@ sticks = []
 class Point(object):
     def __init__(self, pos, tlocked, render=True, join=True, tsave=True):
         global canvas, circleRadius, points, camPos
-        self.position = pos
-        self.previousPosition = pos
+        self.position = Point.SnapPosition(pos)
+        self.previousPosition = Point.SnapPosition(pos)
         self.locked = tlocked
         self.references = []
         self.save = tsave
@@ -104,7 +108,7 @@ class Point(object):
             colour = "pink"
 
         if render:
-            self.renderObject = canvas.create_oval(pos.x-circleRadius-camPos.x, pos.y-circleRadius-camPos.y, pos.x+circleRadius-camPos.x, pos.y+circleRadius-camPos.y, fill=colour)
+            self.renderObject = canvas.create_oval(self.position.x-circleRadius-camPos.x, self.position.y-circleRadius-camPos.y, self.position.x+circleRadius-camPos.x, self.position.y+circleRadius-camPos.y, fill=colour)
             canvas.tag_raise(self.renderObject)
             if join:
                 points.append(self)
@@ -140,6 +144,11 @@ class Point(object):
             txt += str(data)+ ","
         return txt[:-1]
 
+    @staticmethod
+    def SnapPosition(targetLoc):
+        global snapResolution
+        return (targetLoc//snapResolution) * snapResolution
+
     def Simulate(self):
         global gravity, windowCollide, camPos
 
@@ -151,7 +160,7 @@ class Point(object):
             self.position = self.position + posdelta
 
             # Calculate frame delta time
-            delta = (time.time()*1000)-lastFrameTime
+            delta = max((time.time()*1000)-lastFrameTime, 8.3)
 
             # Simulate Gravity based upon frame time
             self.position.y += gravity * delta * delta
@@ -1027,6 +1036,16 @@ def SelectStick4(event):
     selectedStick = 3
 
 # ------------[BINDS]------------
+
+platform.system()
+rightClickNum = "3"
+altModifier = "Alt"
+if platform.system() == 'Darwin':
+    rightClickNum = "2"
+    altModifier = "Option"
+    window.bind("<Control-ButtonPress-2>", MiddleMouseDownHandler)
+    window.bind("<Control-ButtonRelease-2>", MiddleMouseUpHandler)
+
 window.bind("<ButtonPress-1>", Mouse1DownHandler)
 window.bind("<ButtonRelease-1>", Mouse1UpHandler)
 window.bind("<ButtonPress-3>", Mouse2DownHandler)
@@ -1040,8 +1059,8 @@ window.bind("g", GridSpawnHandler)
 window.bind("p", PauseHandler)
 window.bind("<Shift-ButtonPress-3>", ShiftDownHandler)
 window.bind("<Shift-ButtonRelease-3>", ShiftUpHandler)
-window.bind("<Alt-ButtonPress-3>", AltDownHandler)
-window.bind("<Alt-ButtonRelease-3>", AltUpHandler)
+window.bind("<" + altModifier + "-ButtonPress-3>", AltDownHandler)
+window.bind("<" + altModifier + "-ButtonRelease-3>", AltUpHandler)
 window.bind("<Control-s>", SaveToFile)
 window.bind("<Control-Shift-s>", SaveToFileNoCurrent)
 window.bind("<Control-o>", LoadFromFile)
@@ -1076,7 +1095,7 @@ def Interact():
     if not heldPoint == 0:
         mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
         mouseY = int(window.winfo_pointery()-window.winfo_rooty())
-        heldPoint.position = Vector2D(mouseX + camPos.x, mouseY + camPos.y)
+        heldPoint.position = Point.SnapPosition(Vector2D(mouseX + camPos.x, mouseY + camPos.y))
         if not simNow:
             for ref in heldPoint.references:
                 if ref.__class__.__name__ == "SlideStick":
@@ -1132,7 +1151,7 @@ def Render():
         canvas.coords(currentTempStick.renderObject, currentTempStick.pointA.position.x - camPos.x, currentTempStick.pointA.position.y - camPos.y, mouseX, mouseY)
 
     # Update FPS Counter
-    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/((time.time()*1000)-lastFrameTime))*1000)) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y))
+    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/(max((time.time()*1000)-lastFrameTime,8.3))*1000))) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y))
 
     canvas.itemconfigure(selectedStickText, text="Selected Joint Type (1/2/3/4): " + StickTypeName(selectedStick))
 
@@ -1168,6 +1187,20 @@ def GridParamsEnter():
         gridX = int(gridx.get())
         gridY = int(gridy.get())
     except Exception as e: print(e)
+
+def SnapParamsEnter():
+    global snapresolution, snapResolution, canClick, snapparampopup
+
+    canClick = True
+    try:
+        snapparampopup.destroy()
+        snapResolution = int(snapresolution.get())
+    except Exception as e: print(e)
+
+def SnapParamsResolutionDefault():
+    global snapresolution, snapResolution
+    snapresolution.set('1')
+    snapResolution = 1
 
 def SimParamsGravDefault():
     global grav, gravity
@@ -1255,6 +1288,34 @@ def InfoWindow():
     label.pack(side="top", fill="x", pady=20)
     B1 = ttk.Button(popup, text="Okay", command = popup.destroy)
     B1.pack()
+
+def SnapParamsWindow():
+    global window, snapparampopup, snapresolution, snapResolution
+
+    snapparampopup = tk.Tk()
+    snapparampopup.resizable(False, False)
+    #popup.overrideredirect(True)
+
+    width=215
+    height=60
+    center = CalculateMainCenter(width, height)
+
+    snapparampopup.geometry('%dx%d+%d+%d' % (width, height, center.x, center.y))
+    snapparampopup.wm_title("Snap Params")
+
+    snapresolution = tk.StringVar(snapparampopup, value=str(snapResolution))
+
+    tk.Label(snapparampopup, text="Grid Size:").grid(row=0, column=0)
+
+    tk.Entry(snapparampopup, textvariable=snapresolution, width=10).grid(row=0, column=1)
+
+    resolutionButton = ttk.Button(snapparampopup, text="<", command=SnapParamsResolutionDefault, width=3)
+    resolutionButton.grid(row=0, column=2)
+
+    button = ttk.Button(snapparampopup, text="Save", command=SnapParamsEnter)
+    button.grid(row=1, column=2)
+
+    snapparampopup.protocol('WM_DELETE_WINDOW', SnapParamsEnter)
 
 def SimParamsWindow():
     global window, gravity, numIterations, grav, iters, simparampopup, weakstrength, weakStickStength
@@ -1379,6 +1440,7 @@ menubar.add_cascade(label="Simulation", menu=simmenu)
 settingsmenu = tk.Menu(menubar, tearoff=0)
 settingsmenu.add_command(label="Simulation Parameters", command=SimParamsWindow)
 settingsmenu.add_command(label="Grid Parameters", command=GridParamsWindow)
+settingsmenu.add_command(label="Snap Parameters", command=SnapParamsWindow)
 settingsmenu.add_separator()
 settingsmenu.add_command(label="Toggle Window Collision", command=ToggleWindowCollision)
 menubar.add_cascade(label="Settings", menu=settingsmenu)
