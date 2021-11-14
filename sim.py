@@ -401,7 +401,8 @@ class SlideStick(Stick):
         self.middlePoint.Remove()
         self.stick1.Remove()
         self.stick2.Remove()
-        sticks.remove(self)
+        if self in sticks:
+            sticks.remove(self)
 
     def ChangeMiddlePoint(self, point):
         oldPoint = self.middlePoint
