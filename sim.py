@@ -1040,18 +1040,21 @@ def SelectStick4(event):
 platform.system()
 rightClickNum = "3"
 altModifier = "Alt"
+onMac = False
 if platform.system() == 'Darwin':
     rightClickNum = "2"
     altModifier = "Option"
     window.bind("<Control-ButtonPress-2>", MiddleMouseDownHandler)
     window.bind("<Control-ButtonRelease-2>", MiddleMouseUpHandler)
+    onMac = True
 
 window.bind("<ButtonPress-1>", Mouse1DownHandler)
 window.bind("<ButtonRelease-1>", Mouse1UpHandler)
-window.bind("<ButtonPress-3>", Mouse2DownHandler)
-window.bind("<ButtonRelease-3>", Mouse2UpHandler)
-window.bind("<ButtonPress-2>", MiddleMouseDownHandler)
-window.bind("<ButtonRelease-2>", MiddleMouseUpHandler)
+window.bind("<ButtonPress-" + rightClickNum + ">", Mouse2DownHandler)
+window.bind("<ButtonRelease-" + rightClickNum + ">", Mouse2UpHandler)
+if not onMac:
+    window.bind("<ButtonPress-2>", MiddleMouseDownHandler)
+    window.bind("<ButtonRelease-2>", MiddleMouseUpHandler)
 window.bind("<space>", SpaceHandler)
 window.bind("<Return>", LockHandler)
 window.bind("r", DeleteHandler)
@@ -1059,8 +1062,8 @@ window.bind("g", GridSpawnHandler)
 window.bind("p", PauseHandler)
 window.bind("<Shift-ButtonPress-3>", ShiftDownHandler)
 window.bind("<Shift-ButtonRelease-3>", ShiftUpHandler)
-window.bind("<" + altModifier + "-ButtonPress-3>", AltDownHandler)
-window.bind("<" + altModifier + "-ButtonRelease-3>", AltUpHandler)
+window.bind("<" + altModifier + "-ButtonPress-" + rightClickNum + ">", AltDownHandler)
+window.bind("<" + altModifier + "-ButtonRelease-" + rightClickNum + ">", AltUpHandler)
 window.bind("<Control-s>", SaveToFile)
 window.bind("<Control-Shift-s>", SaveToFileNoCurrent)
 window.bind("<Control-o>", LoadFromFile)
