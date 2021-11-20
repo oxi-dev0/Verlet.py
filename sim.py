@@ -153,6 +153,7 @@ class Point(object):
         global gravity, windowCollide, camPos
 
         if not self.locked:
+            # Store previous position
             posBefore = self.position
 
             # Keep velocity from last update
@@ -165,15 +166,18 @@ class Point(object):
             # Simulate Gravity based upon frame time
             self.position.y += gravity * delta * delta
 
-            # Window Collision
+            # Check for Window Collision enabled
             if windowCollide and len(self.references) == 0:
+                
+                # Clamp positions to window bounds
                 self.position.x = Clamp(self.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
                 self.position.y = Clamp(self.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
-            
-            if windowCollide:
-                if self.position.y > window.winfo_height()-30+camPos.y:
-                    self.position = (self.position - (posdelta / 3))
+                
 
+            # Apply drag if on window floor
+            self.position -= (posdelta / 3) * float(self.position.y > window.winfo_height()-30+camPos.y) * float(windowCollide)
+
+            # Assign posBefore to previous position cache
             self.previousPosition = posBefore
 
 class ObjectPoint(Point):
@@ -278,24 +282,34 @@ class Stick:
 
     def Simulate(self, onlyClamp=False):
         global windowCollide, camPos
+
+        # onlyClamp means if the stick should not apply constraints, and only clamp the point to the window
+        
         # Calculate stick data
         if not onlyClamp:
             stickCenter = (self.pointA.position + self.pointB.position) / 2
             stickDir = (self.pointA.position - self.pointB.position).getNormalised()
 
+        # If pointA is not a fixed point
         if not self.pointA.locked:
-            # Push point A to be restrained by stick length
+            
+            # Set pointA's position to where the stick expects it to be.
             if not onlyClamp:
                 self.pointA.position = stickCenter + (stickDir * self.length/2)
 
+            # Clamp pointA to the window bounds
             if windowCollide:
                 self.pointA.position.x = Clamp(self.pointA.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
                 self.pointA.position.y = Clamp(self.pointA.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
+
+        # If pointB is not a fixed point 
         if not self.pointB.locked:
-            # Push point B to be restrained by stick length
+            
+            # Set pointB's position to where the stick expects it to be.
             if not onlyClamp:
                 self.pointB.position = stickCenter - (stickDir * (self.length/2))
 
+            # Clamp pointB to the window bounds
             if windowCollide:
                 self.pointB.position.x = Clamp(self.pointB.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
                 self.pointB.position.y = Clamp(self.pointB.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
@@ -343,6 +357,42 @@ class RopeStick(Stick):
 
         currentLength = Vector2D.Distance(self.pointA.position, self.pointB.position)
         super().Simulate(not currentLength > self.length)
+
+class SpringyStick(Stick):
+    def Simulate(self, onlyClamp=False):
+        global windowCollide, camPos
+
+        # onlyClamp means if the stick should not apply constraints, and only clamp the point to the window
+        
+        # Calculate stick data
+        if not onlyClamp:
+            stickCenter = (self.pointA.position + self.pointB.position) / 2
+            stickDir = (self.pointA.position - self.pointB.position).getNormalised()
+
+        # If pointA is not a fixed point
+        if not self.pointA.locked:
+            
+            # Set pointA's position to where the stick expects it to be.
+            if not onlyClamp:
+                self.pointA.position = Vector2D.Lerp(self.pointA.position, stickCenter + (stickDir * self.length/2), 0.2)
+
+            # Clamp pointA to the window bounds
+            if windowCollide:
+                self.pointA.position.x = Clamp(self.pointA.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
+                self.pointA.position.y = Clamp(self.pointA.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
+
+        # If pointB is not a fixed point 
+        if not self.pointB.locked:
+            
+            # Set pointB's position to where the stick expects it to be.
+            if not onlyClamp:
+                self.pointB.position = Vector2D.Lerp(self.pointB.position, stickCenter - (stickDir * self.length/2), 0.2)
+
+            # Clamp pointB to the window bounds
+            if windowCollide:
+                self.pointB.position.x = Clamp(self.pointB.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
+                self.pointB.position.y = Clamp(self.pointB.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
+
 
 class SlideStick(Stick):
     def __init__(self, tpointA, tpointB, tlength, tbackground, render=True):
@@ -533,6 +583,8 @@ def StickType(stick):
         typ = 2
     if stick.__class__.__name__ == 'WeakStick':
         typ = 3
+    if stick.__class__.__name__ == 'SpringyStick':
+        typ = 4
     return typ
 
 def StickTypeClass(classNum):
@@ -545,6 +597,8 @@ def StickTypeClass(classNum):
         stickClass = SlideStick
     elif classNum == 3:
         stickClass = WeakStick
+    elif classNum == 4:
+        stickClass = SpringyStick
     return stickClass
 
 def StickTypeName(num):
@@ -557,6 +611,8 @@ def StickTypeName(num):
         stickName = "Slide"
     elif num == 3:
         stickName = "Weak"
+    elif num == 4:
+        stickName = "Springy"
     return stickName
 
 def PointType(point):
@@ -1036,6 +1092,10 @@ def SelectStick4(event):
     global selectedStick
     selectedStick = 3
 
+def SelectStick5(event):
+    global selectedStick
+    selectedStick = 4
+
 # ------------[BINDS]------------
 
 platform.system()
@@ -1074,6 +1134,7 @@ window.bind("1", SelectStick1)
 window.bind("2", SelectStick2)
 window.bind("3", SelectStick3)
 window.bind("4", SelectStick4)
+window.bind("5", SelectStick5)
 # ------------[BINDS]------------
 
 # ------------[SIMULATION]------------
