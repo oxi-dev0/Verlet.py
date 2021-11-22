@@ -114,3 +114,4 @@ dmypy.json
 .pyre/
 sim.zip
 Uhmmm.phys
+vector2d.py
