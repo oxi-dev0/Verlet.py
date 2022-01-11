@@ -26,7 +26,7 @@ window.bind('<Configure>', resize)
 
 # ------------[SETTINGS]------------
 # Physics
-gravity = 0.004
+gravity = 2000
 numIterations = 2
 weakStickStrength = 25
 
@@ -41,7 +41,7 @@ rightMouseDown = False
 middleMouseDown = False
 mouseX = 0
 mouseY = 0
-lastFrameTime = 0
+lastFrameTime = (time.time())
 prevPoint = 0
 snapResolution=10
 simNow = False
@@ -161,7 +161,7 @@ class Point(object):
             self.position = self.position + posdelta
 
             # Calculate frame delta time
-            delta = max((time.time()*1000)-lastFrameTime, 8.3)
+            delta = max((time.time())-lastFrameTime, 1/120)
 
             # Simulate Gravity based upon frame time
             self.position.y += gravity * delta * delta
@@ -363,6 +363,8 @@ class SpringyStick(Stick):
         global windowCollide, camPos
 
         # onlyClamp means if the stick should not apply constraints, and only clamp the point to the window
+
+        spring = 0.2
         
         # Calculate stick data
         if not onlyClamp:
@@ -374,7 +376,7 @@ class SpringyStick(Stick):
             
             # Set pointA's position to where the stick expects it to be.
             if not onlyClamp:
-                self.pointA.position = Vector2D.Lerp(self.pointA.position, stickCenter + (stickDir * self.length/2), 0.2)
+                self.pointA.position = Vector2D.Lerp(self.pointA.position, stickCenter + (stickDir * self.length/2), spring)
 
             # Clamp pointA to the window bounds
             if windowCollide:
@@ -386,7 +388,7 @@ class SpringyStick(Stick):
             
             # Set pointB's position to where the stick expects it to be.
             if not onlyClamp:
-                self.pointB.position = Vector2D.Lerp(self.pointB.position, stickCenter - (stickDir * self.length/2), 0.2)
+                self.pointB.position = Vector2D.Lerp(self.pointB.position, stickCenter - (stickDir * self.length/2), spring)
 
             # Clamp pointB to the window bounds
             if windowCollide:
@@ -894,7 +896,7 @@ def NewFile(contin=False, prompt=False):
         else:
             Clear()
             currentFile = ""
-            gravity = 0.004
+            gravity = 2000
             numIterations = 2
     else:
         if len(points) > 0:
@@ -904,12 +906,12 @@ def NewFile(contin=False, prompt=False):
                 else:
                     Clear()
                     currentFile = ""
-                    gravity = 0.004
+                    gravity = 2000
                     numIterations = 2
         else:
             Clear()
             currentFile = ""
-            gravity = 0.004
+            gravity = 2000
             numIterations = 2
 
 def NewFileInst():
@@ -1216,7 +1218,7 @@ def Render():
         canvas.coords(currentTempStick.renderObject, currentTempStick.pointA.position.x - camPos.x, currentTempStick.pointA.position.y - camPos.y, mouseX, mouseY)
 
     # Update FPS Counter
-    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/(max((time.time()*1000)-lastFrameTime,8.3))*1000))) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y))
+    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/(max((time.time())-lastFrameTime,1/120))))) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y))
 
     canvas.itemconfigure(selectedStickText, text="Selected Joint Type (1/2/3/4): " + StickTypeName(selectedStick))
 
@@ -1269,8 +1271,8 @@ def SnapParamsResolutionDefault():
 
 def SimParamsGravDefault():
     global grav, gravity
-    grav.set('0.004')
-    gravity = 0.004
+    grav.set('2000')
+    gravity = 2000
 
 def SimParamsNumItersDefault():
     global iters, numIterations
@@ -1528,16 +1530,23 @@ Render()
 ControlsWindow()
 
 window.protocol('WM_DELETE_WINDOW', CloseSaveInst)
+lastFrameTime = (time.time())
 
 # MAIN LOOP
 while True:
+    startRenderTime = time.time()
+    
     if simNow and not pauseSim:
         Simulate()
 
     Interact()
     Render()
 
-    lastFrameTime = (time.time()*1000)
+    # Target 120 fps. If update took longer, remove from delay time, so frames stay consistent
+    frameTime = (time.time() - startRenderTime)
+    sleepTime = max(0, (1/120) - frameTime)
+    
+    lastFrameTime = (time.time())
 
-    sleep(0.000001)
+    sleep(sleepTime)
 # MAIN LOOP
