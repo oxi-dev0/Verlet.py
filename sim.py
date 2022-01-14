@@ -180,6 +180,14 @@ class Point(object):
             # Assign posBefore to previous position cache
             self.previousPosition = posBefore
 
+    def InterCollision(self, points):
+        global circleRadius
+        point = RaycastPoints(self.previousPosition, self.position)
+        if point:
+            inbetween = (point.position + self.position) / 2
+            self.position = ((inbetween - self.position).getNormalised() * (circleRadius/2)) + inbetween
+            point.position = ((inbetween - point.position).getNormalised() * (circleRadius/2)) + inbetween
+
 class ObjectPoint(Point):
     def __init__(self, pos, tlocked, render=True, join=True, tsave=True, towner=None, tnewSpawned=False):
         global canvas, circleRadius, points
@@ -493,6 +501,16 @@ class TempStick:
 # ------------[CLASSES]------------
 
 # ------------[UTIL FUNCTIONS]------------
+def RaycastPoints(start, stop):
+    global points, circleRadius
+    ray = stop - start
+    for point in points:
+        temp = point.position - start
+        projected = Vector2D.Project(temp, ray)
+        if Vector2D.Distance(start + projected, point.position) <= circleRadius:
+            return point
+    return None
+
 def GetClosestPoint(pos):
     global points, objectPoints, camPos
 
@@ -1149,6 +1167,9 @@ def Simulate():
     for point in objectPoints:
         point.Simulate()
 
+    for point in points:
+        point.InterCollision(points)
+
     # Run through iterations to get physics to settle
     for i in range(numIterations):
         for stick in sticks:
@@ -1211,14 +1232,15 @@ def Render():
     # Update Statusbar
     statusBar['text'] = statusText
 
+    mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
+    mouseY = int(window.winfo_pointery()-window.winfo_rooty())
+
     # Update temp stick if it exists
     if not currentTempStick == 0:
-        mouseX = int(window.winfo_pointerx()-window.winfo_rootx())
-        mouseY = int(window.winfo_pointery()-window.winfo_rooty())
         canvas.coords(currentTempStick.renderObject, currentTempStick.pointA.position.x - camPos.x, currentTempStick.pointA.position.y - camPos.y, mouseX, mouseY)
 
     # Update FPS Counter
-    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/(max((time.time())-lastFrameTime,1/120))))) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y))
+    canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/(max((time.time())-lastFrameTime,1/120))))) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y) + " - Mouse X: " + str(mouseX) + ", Y: " + str(mouseY))
 
     canvas.itemconfigure(selectedStickText, text="Selected Joint Type (1/2/3/4): " + StickTypeName(selectedStick))
 
@@ -1541,6 +1563,10 @@ while True:
 
     Interact()
     Render()
+
+    temp = RaycastPoints(Vector2D(5, 100), Vector2D(100, 100))
+    if temp:
+        print("Hi")
 
     # Target 120 fps. If update took longer, remove from delay time, so frames stay consistent
     frameTime = (time.time() - startRenderTime)
