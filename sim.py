@@ -9,6 +9,7 @@ import time
 import os
 from vector2d import Vector2D
 import platform
+import random
 
 window = tk.Tk()
 window.title("TKinter Physics Sim - V1")
@@ -102,6 +103,7 @@ class Point(object):
         self.locked = tlocked
         self.references = []
         self.save = tsave
+        self.raycast = Raycast(self.previousPosition, self.position)
 
         colour = "black"
         if tlocked:
@@ -167,26 +169,30 @@ class Point(object):
             self.position.y += gravity * delta * delta
 
             # Check for Window Collision enabled
-            if windowCollide and len(self.references) == 0:
+            if windowCollide:
+                # Apply drag if on window floor
+                if self.position.y > window.winfo_height()-30+camPos.y:
+                    self.position -= posdelta / 20
                 
-                # Clamp positions to window bounds
-                self.position.x = Clamp(self.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
-                self.position.y = Clamp(self.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
-                
-
-            # Apply drag if on window floor
-            self.position -= (posdelta / 3) * float(self.position.y > window.winfo_height()-30+camPos.y) * float(windowCollide)
+                if len(self.references) == 0:
+                    # Clamp positions to window bounds
+                    self.position.x = Clamp(self.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
+                    self.position.y = Clamp(self.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
 
             # Assign posBefore to previous position cache
             self.previousPosition = posBefore
 
-    def InterCollision(self, points):
-        global circleRadius
-        point = RaycastPoints(self.previousPosition, self.position)
-        if point:
-            inbetween = (point.position + self.position) / 2
-            self.position = ((inbetween - self.position).getNormalised() * (circleRadius/2)) + inbetween
-            point.position = ((inbetween - point.position).getNormalised() * (circleRadius/2)) + inbetween
+            self.InterCollision()
+
+    def InterCollision(self):
+        global circleRadius, points
+        self.raycast.Move(self.previousPosition, self.position)
+        data = self.raycast.TracePoints(self)
+        if data:
+            point = data.obj
+            points[data.objIndex].position = ((point.position - self.position).getNormalised() * circleRadius) + data.loc
+            self.position = ((point.position - self.position).getNormalised() * -circleRadius) + data.loc #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
+            #self.previousPosition = data.loc
 
 class ObjectPoint(Point):
     def __init__(self, pos, tlocked, render=True, join=True, tsave=True, towner=None, tnewSpawned=False):
@@ -500,17 +506,55 @@ class TempStick:
 
 # ------------[CLASSES]------------
 
-# ------------[UTIL FUNCTIONS]------------
-def RaycastPoints(start, stop):
-    global points, circleRadius
-    ray = stop - start
-    for point in points:
-        temp = point.position - start
-        projected = Vector2D.Project(temp, ray)
-        if Vector2D.Distance(start + projected, point.position) <= circleRadius:
-            return point
-    return None
+# ------------[UTIL CLASSES]----------
+class RaycastData(object):
+    def __init__(self, obj, index, loc, raycast):
+        self.obj = obj
+        self.objIndex = index
+        self.loc = loc
+        self.raycast = raycast
 
+    def __str__(self):
+        return f"Raycast Data {{obj:{str(self.obj)}, loc:{str(self.loc)}, raycast:{str(self.raycast)}}}"
+        
+class Raycast(object):
+    def __init__(self, _start, _stop):
+        self.start = _start
+        self.stop = _stop
+        self.dir = (_stop - _start).getNormalised()
+
+    def Move(self, _start, _stop):
+        self.start = _start
+        self.stop = _stop
+        self.dir = (_stop - _start).getNormalised()
+
+    def TracePoints(self, ignore=None):
+        global points, circleRadius
+        ray = self.stop - self.start
+        i = 0
+        for point in points:
+            if not point == ignore:
+                # Calculate delta to point
+                center = ((self.start + self.stop) / 2)
+                temp = point.position - center
+
+                # Project to raycast 
+                projected = Vector2D.Project(temp, ray)
+
+                # Limit distance check to original ray
+                projected = projected.getNormalised() * min(projected.length, ray.length/2)
+                
+                if Vector2D.Distance(center + projected, point.position) <= circleRadius:
+                    loc = (((self.start) - point.position).getNormalised() * circleRadius) + point.position
+                    return RaycastData(point, i, loc, self)
+            i += 1
+        return None
+
+    def __str__(self):
+        return f"Raycast {{start:{str(self.start)}, stop:{str(self.stop)}}}"
+# ------------[UTIL CLASSES]----------
+
+# ------------[UTIL FUNCTIONS]------------
 def GetClosestPoint(pos):
     global points, objectPoints, camPos
 
@@ -1167,9 +1211,6 @@ def Simulate():
     for point in objectPoints:
         point.Simulate()
 
-    for point in points:
-        point.InterCollision(points)
-
     # Run through iterations to get physics to settle
     for i in range(numIterations):
         for stick in sticks:
@@ -1564,9 +1605,9 @@ while True:
     Interact()
     Render()
 
-    temp = RaycastPoints(Vector2D(5, 100), Vector2D(100, 100))
-    if temp:
-        print("Hi")
+    #temp = RaycastPoints(Vector2D(100, 500), Vector2D(500, 500))
+    #if temp:
+    #    print(f"Test Ray hit {random.randrange(0,10)}")
 
     # Target 120 fps. If update took longer, remove from delay time, so frames stay consistent
     frameTime = (time.time() - startRenderTime)
