@@ -331,7 +331,14 @@ class Stick:
 
 class WeakStick(Stick):
     def CalcColour(self):
-        return "Green"
+        rgbStrong = (25,200,25)
+        rgbWeak = (200, 25, 255)
+        dist = Vector2D.Distance(self.pointA.position, self.pointB.position)
+        alpha1 = (dist/self.length + weakStickStrength)
+        alpha2 = (dist/self.length - weakStickStrength)
+        print(f"{alpha1} : {alpha2}")
+        lerped = RGBLerp(rgbStrong, rgbWeak, max(alpha1, alpha2))
+        return FromRGB(lerped)
 
     def Break(self):
         # stickA + (normalize(stickB-stickA) * ((Distance(stickA, stickB)/2)+-10)
@@ -692,6 +699,20 @@ def PointTypeClass(classNum):
     elif classNum == 1:
         pointClass = ObjectPoint
     return pointClass
+
+def FromRGB(rgb):
+    return "#%02x%02x%02x" % rgb
+
+def FLerp(a, b, t):
+    return a + t * (b - a)
+
+def RGBLerp(a, b, t):
+    rgb = [0,0,0]
+    i=0
+    while i <= 2:
+        rgb[i] = Clamp(int(FLerp(a[i], b[i], t)), 0, 255)
+        i+=1
+    return (rgb[0], rgb[1], rgb[2])
 
 # ------------[UTIL FUNCTIONS]------------
 
