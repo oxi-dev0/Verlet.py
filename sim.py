@@ -204,6 +204,7 @@ class ObjectPoint(Point):
         self.owner = towner
         self.save = tsave
         self.newlySpawned=tnewSpawned
+        self.raycast = Raycast(self.previousPosition, self.position)
 
         colour = "red"
 
@@ -267,6 +268,10 @@ class Stick:
                 canvas.tag_lower(self.renderObject)
 
             sticks.append(self)
+
+    def Render(self):
+        # Override
+        debug = True
 
     def CalcColour(self):
         colour = "black"
@@ -334,11 +339,17 @@ class WeakStick(Stick):
         rgbStrong = (25,200,25)
         rgbWeak = (200, 25, 255)
         dist = Vector2D.Distance(self.pointA.position, self.pointB.position)
-        alpha1 = (dist/self.length + weakStickStrength)
-        alpha2 = (dist/self.length - weakStickStrength)
+        alpha1 = (self.length + weakStickStrength)/dist
+        alpha2 = (self.length - weakStickStrength)/dist
         print(f"{alpha1} : {alpha2}")
-        lerped = RGBLerp(rgbStrong, rgbWeak, max(alpha1, alpha2))
+        lerped = RGBLerp(rgbStrong, rgbWeak, min(alpha1, alpha2))
         return FromRGB(lerped)
+
+    def Render(self):
+        global canvas
+        self.colour = self.CalcColour()
+        canvas.itemconfigure(self.renderObject, fill=self.colour)
+        super().Render()
 
     def Break(self):
         # stickA + (normalize(stickB-stickA) * ((Distance(stickA, stickB)/2)+-10)
@@ -1284,6 +1295,7 @@ def Render():
     # Update each point and stick's location
     for stick in sticks:
         if hasattr(stick, 'renderObject'):
+            stick.Render()
             canvas.coords(stick.renderObject, stick.pointA.position.x - camPos.x, stick.pointA.position.y - camPos.y, stick.pointB.position.x - camPos.x, stick.pointB.position.y - camPos.y)
 
     for point in points:
