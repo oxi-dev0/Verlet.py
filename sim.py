@@ -102,8 +102,7 @@ class Point(object):
         self.previousPosition = Point.SnapPosition(pos)
         self.locked = tlocked
         self.references = []
-        self.save = tsave
-        self.raycast = Raycast(self.previousPosition, self.position)
+        self.save = tsave 
 
         colour = "black"
         if tlocked:
@@ -186,12 +185,12 @@ class Point(object):
 
     def InterCollision(self):
         global circleRadius, points
-        self.raycast.Move(self.previousPosition, self.position)
-        data = self.raycast.TracePoints(self)
+        data = Raycast(self.previousPosition, self.position).TracePoints(self)
         if data:
             point = data.obj
-            points[data.objIndex].position = ((point.position - self.position).getNormalised() * circleRadius) + data.loc
-            self.position = ((point.position - self.position).getNormalised() * -circleRadius) + data.loc #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
+            dr = data.normal
+            points[data.objIndex].position = (dr * circleRadius) + data.loc
+            self.position = (dr * -circleRadius) + data.loc #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
             #self.previousPosition = data.loc
 
 class ObjectPoint(Point):
@@ -339,10 +338,10 @@ class WeakStick(Stick):
         rgbStrong = (25,200,25)
         rgbWeak = (200, 25, 255)
         dist = Vector2D.Distance(self.pointA.position, self.pointB.position)
-        alpha1 = (self.length + weakStickStrength)/dist
-        alpha2 = (self.length - weakStickStrength)/dist
-        print(f"{alpha1} : {alpha2}")
-        lerped = RGBLerp(rgbStrong, rgbWeak, min(alpha1, alpha2))
+        maxLength = (self.length + weakStickStrength)
+        minLength = (self.length - weakStickStrength)
+        alpha = abs(Map(dist, minLength, maxLength, -1, 1))
+        lerped = RGBLerp(rgbStrong, rgbWeak, alpha)
         return FromRGB(lerped)
 
     def Render(self):
@@ -356,10 +355,10 @@ class WeakStick(Stick):
         dist = Vector2D.Distance(self.pointA.position, self.pointB.position)/ 2
         stickDir = ((self.pointB.position / self.pointA.position)).getNormalised()
 
-        newPoint = Point((self.pointA.position + (stickDir * (dist-10))), False)
-        Stick(self.pointA, newPoint, Vector2D.Distance(self.pointA.position, newPoint.position), False)
-        newPoint = Point((self.pointA.position + (stickDir * (dist+10))), False)
-        Stick(self.pointB, newPoint, Vector2D.Distance(self.pointB.position, newPoint.position), False)
+        #newPoint = Point((self.pointA.position + (stickDir * (dist-10))), False)
+        #Stick(self.pointA, newPoint, Vector2D.Distance(self.pointA.position, newPoint.position), False)
+        #newPoint = Point((self.pointA.position + (stickDir * (dist+10))), False)
+        #Stick(self.pointB, newPoint, Vector2D.Distance(self.pointB.position, newPoint.position), False)
         self.Remove()
 
 
@@ -526,22 +525,18 @@ class TempStick:
 
 # ------------[UTIL CLASSES]----------
 class RaycastData(object):
-    def __init__(self, obj, index, loc, raycast):
+    def __init__(self, obj, index, loc, raycast, normal):
         self.obj = obj
         self.objIndex = index
         self.loc = loc
         self.raycast = raycast
+        self.normal = normal
 
     def __str__(self):
         return f"Raycast Data {{obj:{str(self.obj)}, loc:{str(self.loc)}, raycast:{str(self.raycast)}}}"
         
 class Raycast(object):
     def __init__(self, _start, _stop):
-        self.start = _start
-        self.stop = _stop
-        self.dir = (_stop - _start).getNormalised()
-
-    def Move(self, _start, _stop):
         self.start = _start
         self.stop = _stop
         self.dir = (_stop - _start).getNormalised()
@@ -564,7 +559,8 @@ class Raycast(object):
                 
                 if Vector2D.Distance(center + projected, point.position) <= circleRadius:
                     loc = (((self.start) - point.position).getNormalised() * circleRadius) + point.position
-                    return RaycastData(point, i, loc, self)
+                    normal = (loc - self.start).getNormalised()
+                    return RaycastData(point, i, loc, self, normal)
             i += 1
         return None
 
@@ -724,6 +720,9 @@ def RGBLerp(a, b, t):
         rgb[i] = Clamp(int(FLerp(a[i], b[i], t)), 0, 255)
         i+=1
     return (rgb[0], rgb[1], rgb[2])
+
+def Map(x, min1, max1, min2, max2):
+  return (x - min1) * (max2 - min2) / (max1 - min1) + min2
 
 # ------------[UTIL FUNCTIONS]------------
 
