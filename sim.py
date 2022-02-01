@@ -1,4 +1,4 @@
-# Oxi 08/09/2021
+# Oxi 08/09/2021 - 01/02/2022 (CURRENT)
 
 import math
 import tkinter as tk
@@ -187,10 +187,8 @@ class Point(object):
         global circleRadius, points
         data = Raycast(self.previousPosition, self.position).TracePoints(self)
         if data:
-            point = data.obj
-            dr = data.normal
-            points[data.objIndex].position = (dr * circleRadius) + data.loc
-            self.position = (dr * -circleRadius) + data.loc #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
+            points[data.objIndex].position = (data.normal * -circleRadius) + data.obj.position
+            self.position = (data.normal * circleRadius) + self.position #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
             #self.previousPosition = data.loc
 
 class ObjectPoint(Point):
@@ -241,6 +239,7 @@ class ObjectPoint(Point):
         for data in dataCache:
             txt += str(data)+ ","
         return txt[:-1]
+
 
 class Stick:
     def __init__(self, tpointA, tpointB, tlength, tbackground, render=True, standin=False, tsave=True, tstickType=0):
@@ -332,7 +331,6 @@ class Stick:
                 self.pointB.position.x = Clamp(self.pointB.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
                 self.pointB.position.y = Clamp(self.pointB.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
 
-
 class WeakStick(Stick):
     def CalcColour(self):
         rgbStrong = (25,200,25)
@@ -371,7 +369,6 @@ class WeakStick(Stick):
 
         if Vector2D.Distance(self.pointA.position, self.pointB.position) < self.length - weakStickStrength:
             self.Break()
-
 
 class RopeStick(Stick):
     def CalcColour(self):
@@ -425,7 +422,6 @@ class SpringyStick(Stick):
             if windowCollide:
                 self.pointB.position.x = Clamp(self.pointB.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
                 self.pointB.position.y = Clamp(self.pointB.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
-
 
 class SlideStick(Stick):
     def __init__(self, tpointA, tpointB, tlength, tbackground, render=True):
@@ -520,7 +516,6 @@ class TempStick:
         global currentTempStick, canvas
         canvas.delete(currentTempStick.renderObject)
         currentTempStick = 0
-
 # ------------[CLASSES]------------
 
 # ------------[UTIL CLASSES]----------
@@ -528,12 +523,12 @@ class RaycastData(object):
     def __init__(self, obj, index, loc, raycast, normal):
         self.obj = obj
         self.objIndex = index
-        self.loc = loc
+        self.hitLoc = loc
         self.raycast = raycast
         self.normal = normal
 
     def __str__(self):
-        return f"Raycast Data {{obj:{str(self.obj)}, loc:{str(self.loc)}, raycast:{str(self.raycast)}}}"
+        return f"Raycast Data {{obj:{str(self.obj)}, loc:{str(self.hitLoc)}, raycast:{str(self.raycast)}}}"
         
 class Raycast(object):
     def __init__(self, _start, _stop):
@@ -548,19 +543,23 @@ class Raycast(object):
         for point in points:
             if not point == ignore:
                 # Calculate delta to point
-                center = ((self.start + self.stop) / 2)
-                temp = point.position - center
+                center = (self.start + self.stop) / 2
+                delta = point.position - center
 
-                # Project to raycast 
-                projected = Vector2D.Project(temp, ray)
+                # Project delta to ray
+                projected = Vector2D.Project(delta, ray)
 
-                # Limit distance check to original ray
+                # Clamp distance check to the ray
                 projected = projected.getNormalised() * min(projected.length, ray.length/2)
                 
+                # Check if point distance to point on ray is smaller than circleRadius
                 if Vector2D.Distance(center + projected, point.position) <= circleRadius:
-                    loc = (((self.start) - point.position).getNormalised() * circleRadius) + point.position
-                    normal = (loc - self.start).getNormalised()
-                    return RaycastData(point, i, loc, self, normal)
+                    # Calculate normal from actual point to ray point.
+                    normal = ((center + projected) - point.position).getNormalised()
+
+                    # Calculate hit location by multiplying normal by circle radius and adding actual point position
+                    hitLoc = (normal * circleRadius) + point.position
+                    return RaycastData(point, i, hitLoc, self, normal)
             i += 1
         return None
 
