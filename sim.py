@@ -185,11 +185,16 @@ class Point(object):
 
     def InterCollision(self):
         global circleRadius, points
-        data = Raycast(self.previousPosition, self.position).TracePoints(self)
+        raycast = Raycast(self.previousPosition, self.position)
+        data = raycast.TracePoints(self)
         if data:
             points[data.objIndex].position = (data.normal * -circleRadius) + data.obj.position
             self.position = (data.normal * circleRadius) + self.position #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
             #self.previousPosition = data.loc
+        data = raycast.TraceSticks(self.references)
+        if data:
+            self.position = data.hitLoc + (data.normal*circleRadius)
+            #self.previousPosition = data.hitLoc
 
 class ObjectPoint(Point):
     def __init__(self, pos, tlocked, render=True, join=True, tsave=True, towner=None, tnewSpawned=False):
@@ -390,9 +395,7 @@ class SpringyStick(Stick):
     def Simulate(self, onlyClamp=False):
         global windowCollide, camPos
 
-        # onlyClamp means if the stick should not apply constraints, and only clamp the point to the window
-
-        spring = 0.2
+        spring = 0.1
         
         # Calculate stick data
         if not onlyClamp:
@@ -562,6 +565,30 @@ class Raycast(object):
                     return RaycastData(point, i, hitLoc, self, normal)
             i += 1
         return None
+    
+    def TraceSticks(self, ignores=None):
+        global sticks, circleRadius
+        rayDir = (self.stop - self.start).getNormalised()
+        i = 0
+        for stick in sticks:
+            if not stick in ignores:
+                inter = Vector2D.Intersection(self.start, self.stop, stick.pointA.position, stick.pointB.position)
+                if inter:
+                    stickDir = (stick.pointB.position - stick.pointA.position).getNormalised()
+                    normal = None
+                    stickRight = Vector2D(stickDir.y, -stickDir.x)
+                    dot = Vector2D.DotProduct(stickRight, rayDir)
+                    print(dot)
+                    if dot <= 0:
+                        # Clockwise perpendicular
+                        normal = stickRight
+                    else:
+                        # Counter-Clockwise perpendicular
+                        normal = Vector2D(-stickDir.y, stickDir.x)
+                    return RaycastData(stick, i, inter, self, normal)
+            i += 1
+        return None
+                    
 
     def __str__(self):
         return f"Raycast {{start:{str(self.start)}, stop:{str(self.stop)}}}"
