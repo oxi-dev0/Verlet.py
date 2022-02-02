@@ -113,6 +113,10 @@ class Point(object):
             canvas.tag_raise(self.renderObject)
             if join:
                 points.append(self)
+    
+    def Move(self, pos):
+        if not self.locked:
+            self.position = pos
 
     def ToggleLock(self):
         global canvas
@@ -186,14 +190,15 @@ class Point(object):
     def InterCollision(self):
         global circleRadius, points
         raycast = Raycast(self.previousPosition, self.position)
+        velo = Vector2D.Distance(self.position, self.previousPosition) / 1.25
         data = raycast.TracePoints(self)
         if data:
-            points[data.objIndex].position = (data.normal * -circleRadius) + data.obj.position
-            self.position = (data.normal * circleRadius) + self.position #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
+            points[data.objIndex].Move((data.normal * -velo) + data.obj.position)
+            self.Move((data.normal * velo) + self.position) #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
             #self.previousPosition = data.loc
         data = raycast.TraceSticks(self.references)
         if data:
-            self.position = data.hitLoc + (data.normal*circleRadius)
+            self.Move(data.hitLoc + (data.normal*velo))
             #self.previousPosition = data.hitLoc
 
 class ObjectPoint(Point):
