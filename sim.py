@@ -18,7 +18,7 @@ import platform
 import random
 
 window = tk.Tk()
-window.title("TKinter Physics Sim - V1")
+window.title("TKinter Physics Sim - V2")
 window.geometry("1920x1080")
 
 canvas = tk.Canvas(window, width=1000, height=1000)
@@ -196,9 +196,12 @@ class Point(object):
     def InterCollision(self):
         global circleRadius, points
         raycast = Raycast(self.previousPosition, self.position)
-        velo = Vector2D.Distance(self.position, self.previousPosition) / 1.25
+        veloA = Vector2D.Distance(self.position, self.previousPosition)
         data = raycast.TracePoints(self)
         if data:
+            veloB = Vector2D.Distance(data.obj.position, data.obj.previousPosition)
+            velo = veloA - veloB
+            velo /= 1.25
             # POINT COLLISION
             points[data.objIndex].Move((data.normal * -velo) + data.obj.position)
             self.Move((data.normal * velo) + self.position) #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
@@ -206,13 +209,16 @@ class Point(object):
         data = raycast.TraceSticks(self.references)
         if data:
             # STICK COLLISION
+            veloB = Vector2D.Distance(data.obj.pointA.position, data.obj.pointA.previousPosition) + Vector2D.Distance(data.obj.pointB.position, data.obj.pointB.previousPosition)
+            velo = veloA - veloB
+            velo /= 1.25
             self.Move(data.hitLoc + (data.normal*velo))
             veloVector = self.previousPosition - self.position
             projVelo = Vector2D.Project(veloVector, (data.obj.pointB.position - data.obj.pointA.position).getNormalised())
             self.previousPosition = data.hitLoc+projVelo
             
-            data.obj.pointA.Move(data.obj.pointA.position - (data.normal*velo))
-            data.obj.pointB.Move(data.obj.pointB.position - (data.normal*velo))
+            data.obj.pointA.Move(data.obj.pointA.position - (data.normal*velo/2))
+            data.obj.pointB.Move(data.obj.pointB.position - (data.normal*velo/2))
             #self.previousPosition = data.hitLoc
 
 class ObjectPoint(Point):
