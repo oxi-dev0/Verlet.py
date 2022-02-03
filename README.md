@@ -30,23 +30,21 @@
 </p>
 
 <h3 align="center"> A Verlet simulation toy in Python </h3>
+<h6 align="center"> Please Note: This has it's own local copy of Vector2D.py, as I forgot how to make a new build to pypi. </h1>
 
-### Installation / Running
-1. [Download](https://github.com/oxi-dev0/Verlet.py/releases)
+
+<h2> Documentation </h2>
+
+### Installation
+1. [Download the program](https://github.com/oxi-dev0/Verlet.py/releases)
 2. Install python 3.xx
-3. Install tkinter (`pip3 install tkinter`)
-4. Run sim.py
-5. Read controls then play around and feel free to open demo maps (File > Open)
-
-------------
-
+3. Run sim.py
 
 
 ### Future
 - Powered Joints (Motors, Pistons, etc)
 - Water / Sand / Particle Sim
 - Inter-Collision
-------------
 
 
 <p align="center">
