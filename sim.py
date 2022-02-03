@@ -7,6 +7,8 @@ from tkinter import ttk
 from time import sleep
 import time
 import os
+import subprocess
+import sys
 
 # Install Vector2D.py if it has not been installed.
 try:
@@ -16,6 +18,24 @@ except ImportError:
 
 import platform
 import random
+
+# ------------[CONFIG VARS]------------
+
+# EXPERIMENTAl
+intercollision = False
+
+args = sys.argv
+if "-configured" not in args:
+    DETACHED_PROCESS = 8
+    subprocess.Popen(f'python "{os.getcwd()}/options.py"', creationflags=DETACHED_PROCESS, close_fds=True)
+
+    sleep(0.5)
+    os._exit(1)
+else:
+    if "-intercollision" in args:
+        intercollision = True
+            
+# ------------[CONFIG VARS]------------
 
 window = tk.Tk()
 window.title("TKinter Physics Sim - V2")
@@ -161,7 +181,7 @@ class Point(object):
         return (targetLoc//snapResolution) * snapResolution
 
     def Simulate(self):
-        global gravity, windowCollide, camPos
+        global gravity, windowCollide, camPos, intercollision
 
         if not self.locked:
             # Store previous position
@@ -191,7 +211,8 @@ class Point(object):
             # Assign posBefore to previous position cache
             self.previousPosition = posBefore
 
-            self.InterCollision()
+            if intercollision:
+                self.InterCollision()
 
     def InterCollision(self):
         global circleRadius, points
