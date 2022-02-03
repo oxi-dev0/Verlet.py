@@ -7,7 +7,13 @@ from tkinter import ttk
 from time import sleep
 import time
 import os
-from vector2d import Vector2D
+
+# Install Vector2D.py if it has not been installed.
+try:
+    from vector2d import Vector2D
+except ImportError:
+    os.system(f'python -m pip install vector2d.py')
+
 import platform
 import random
 
