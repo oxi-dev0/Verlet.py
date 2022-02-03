@@ -193,12 +193,20 @@ class Point(object):
         velo = Vector2D.Distance(self.position, self.previousPosition) / 1.25
         data = raycast.TracePoints(self)
         if data:
+            # POINT COLLISION
             points[data.objIndex].Move((data.normal * -velo) + data.obj.position)
             self.Move((data.normal * velo) + self.position) #((loc - data.raycast.start).getNormalised() * (circleRadius/2)) + loc
             #self.previousPosition = data.loc
         data = raycast.TraceSticks(self.references)
         if data:
+            # STICK COLLISION
             self.Move(data.hitLoc + (data.normal*velo))
+            veloVector = self.previousPosition - self.position
+            projVelo = Vector2D.Project(veloVector, (data.obj.pointB.position - data.obj.pointA.position).getNormalised())
+            self.previousPosition = data.hitLoc+projVelo
+            
+            data.obj.pointA.Move(data.obj.pointA.position - (data.normal*velo))
+            data.obj.pointB.Move(data.obj.pointB.position - (data.normal*velo))
             #self.previousPosition = data.hitLoc
 
 class ObjectPoint(Point):
@@ -1142,6 +1150,7 @@ def LoadFromFile(event=None):
         canClick = False
 
         Clear(True)
+        pointsOffset = 0 #len(points+objectPoints)
 
         path = os.getcwd()+'/Maps/'
         if not os.path.exists(path):
@@ -1182,7 +1191,7 @@ def LoadFromFile(event=None):
                 if len(stickData) == 5:
                     stickClass = StickTypeClass(int(stickData[4]))
                     combined = points+objectPoints
-                    stickClass(combined[int(stickData[0])], combined[int(stickData[1])], float(stickData[2]), bool(int(stickData[3])))
+                    stickClass(combined[int(stickData[0])+pointsOffset], combined[int(stickData[1])+pointsOffset], float(stickData[2]), bool(int(stickData[3])))
                 percent = ((stickList.index(stickDataChunk)+len(pointList)+len(objectPointList)) / (total))*100
                 statusText = "Loading " + str(int(percent)) + "%"
                 statusBar['text'] = statusText
