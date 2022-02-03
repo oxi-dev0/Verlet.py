@@ -30,6 +30,7 @@
 </p>
 
 <h3 align="center"> A Verlet simulation toy in Python </h3>
+<h6 align="center"> Please Note: This has it's own local copy of Vector2D.py, as I forgot how to make a new build to pypi. </h1>
 
 ### Installation / Running
 1. [Download](https://github.com/oxi-dev0/Verlet.py/releases)
