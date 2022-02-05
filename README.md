@@ -44,7 +44,6 @@
 ### Future
 - Powered Joints (Motors, Pistons, etc)
 - Water / Sand / Particle Sim
-- Inter-Collision
 
 
 <p align="center">
