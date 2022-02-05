@@ -1,4 +1,4 @@
-# Oxi 08/09/2021 - 01/02/2022 (CURRENT)
+# Oxi 08/09/2021 - 05/02/2022 (CURRENT)
 
 import math
 import tkinter as tk
@@ -1670,7 +1670,7 @@ def ControlsWindow():
     controlsPopup.geometry('%dx%d+%d+%d' % (width, height, center.x, center.y))
     controlsPopup.wm_title("Welcome")
 
-    label = tk.Label(controlsPopup, text="TKinter Physics Sim v1 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n R - Delete closest point \n Alt + Right Click Drag - Slice joints \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
+    label = tk.Label(controlsPopup, text="TKinter Physics Sim v2 - Written by Oxi \n \n Controls: \n Click in empty space - Spawn Point \n Right click and drag from a point to another - Join Points \n \n Enter while hovering over point - Lock Point \n \n 1/2/3/4 - Select join type \n\n R - Delete closest point \n Alt + Right Click Drag - Slice joints \n \n G - Spawn Configurable Grid \n \n Space - Start/Stop Simulation \n P - Pause \n \n CTRL+S - Save \n CTRL+O - Open")
     label.pack(side="top", fill="x", pady=20)
 
     button = ttk.Button(controlsPopup, text="Continue", command=controlsPopup.destroy)
