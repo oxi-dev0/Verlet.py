@@ -169,8 +169,9 @@ class Point(object):
             points.remove(self)
 
     def Parse(self):
+        global camPos
         txt = ""
-        dataCache = [self.position.x, self.position.y, int(self.locked)]
+        dataCache = [self.position.x-camPos.x, self.position.y-camPos.y, int(self.locked)]
         for data in dataCache:
             txt += str(data)+ ","
         return txt[:-1]
@@ -214,6 +215,7 @@ class Point(object):
             if intercollision:
                 self.InterCollision()
 
+
     def InterCollision(self):
         global circleRadius, points
         raycast = Raycast(self.previousPosition, self.position)
@@ -230,7 +232,7 @@ class Point(object):
         data = raycast.TraceSticks(self.references)
         if data:
             # STICK COLLISION
-            veloB = Vector2D.Distance(data.obj.pointA.position, data.obj.pointA.previousPosition) + Vector2D.Distance(data.obj.pointB.position, data.obj.pointB.previousPosition)
+            veloB = (Vector2D.Distance(data.obj.pointA.position, data.obj.pointA.previousPosition) + Vector2D.Distance(data.obj.pointB.position, data.obj.pointB.previousPosition))/2
             velo = veloA - veloB
             velo /= 1.25
             self.Move(data.hitLoc + (data.normal*velo))
@@ -284,9 +286,9 @@ class ObjectPoint(Point):
             objectPoints.remove(self)
 
     def Parse(self):
-        global sticks
+        global sticks, camPos
         txt = ""
-        dataCache = [self.position.x, self.position.y, int(self.locked), sticks.index(self.owner)]
+        dataCache = [self.position.x-camPos.x, self.position.y-camPos.y, int(self.locked), sticks.index(self.owner)]
         for data in dataCache:
             txt += str(data)+ ","
         return txt[:-1]
@@ -1319,6 +1321,8 @@ def Simulate():
     for i in range(numIterations):
         for stick in sticks:
             stick.Simulate()
+
+
 # ------------[SIMULATION]------------
 
 # ------------[INTERACT]------------
@@ -1362,7 +1366,7 @@ def Interact():
 
 # ------------[RENDER]------------
 def Render():
-    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile, objectPoints, sticks, camPos, backgroundDots
+    global canvas, fpsText, lastFrameTime, currentTempStick, statusBar, statusText, window, currentFile, objectPoints, sticks, camPos
 
     # Update each point and stick's location
     for stick in sticks:
@@ -1388,10 +1392,10 @@ def Render():
     # Update FPS Counter
     canvas.itemconfigure(fpsText, text="FPS: " + str(math.floor((1/(max((time.time())-lastFrameTime,1/120))))) + " - Camera X: " + str(camPos.x) + ", Y: " + str(-camPos.y) + " - Mouse X: " + str(mouseX) + ", Y: " + str(mouseY))
 
-    canvas.itemconfigure(selectedStickText, text="Selected Joint Type (1/2/3/4): " + StickTypeName(selectedStick))
+    canvas.itemconfigure(selectedStickText, text="Selected Joint Type (Numbers): " + StickTypeName(selectedStick))
 
     # Update Title Bar
-    title = "TKinter Physics Sim - V1"
+    title = "TKinter Physics Sim - V2"
     if not currentFile == "":
         title += " - " + currentFile
     window.title(title)
