@@ -240,8 +240,13 @@ class Point(object):
             projVelo = Vector2D.Project(veloVector, (data.obj.pointB.position - data.obj.pointA.position).getNormalised())
             self.previousPosition = data.hitLoc+projVelo
             
-            data.obj.pointA.Move(data.obj.pointA.position - (data.normal*velo/2))
-            data.obj.pointB.Move(data.obj.pointB.position - (data.normal*velo/2))
+            fullForce = data.normal*velo
+
+            aAlpha = Vector2D.InverseLerp(data.obj.pointB.position, data.obj.pointA.position, data.hitLoc)
+            bAlpha = Vector2D.InverseLerp(data.obj.pointA.position, data.obj.pointB.position, data.hitLoc)
+
+            data.obj.pointA.Move(data.obj.pointA.position - (fullForce*aAlpha))
+            data.obj.pointB.Move(data.obj.pointB.position - (fullForce*bAlpha))
             #self.previousPosition = data.hitLoc
 
 class ObjectPoint(Point):
@@ -406,22 +411,26 @@ class WeakStick(Stick):
         dist = Vector2D.Distance(self.pointA.position, self.pointB.position)/ 2
         stickDir = ((self.pointB.position / self.pointA.position)).getNormalised()
 
-        #newPoint = Point((self.pointA.position + (stickDir * (dist-10))), False)
-        #Stick(self.pointA, newPoint, Vector2D.Distance(self.pointA.position, newPoint.position), False)
-        #newPoint = Point((self.pointA.position + (stickDir * (dist+10))), False)
-        #Stick(self.pointB, newPoint, Vector2D.Distance(self.pointB.position, newPoint.position), False)
+        newPoint = Point((self.pointA.position + (stickDir * (dist-10))), False)
+        Stick(self.pointA, newPoint, Vector2D.Distance(self.pointA.position, newPoint.position), False)
+        newPoint = Point((self.pointA.position + (stickDir * (dist+10))), False)
+        Stick(self.pointB, newPoint, Vector2D.Distance(self.pointB.position, newPoint.position), False)
         self.Remove()
 
 
     def Simulate(self):
         global weakStickStrength     
+
+        dist = Vector2D.Distance(self.pointA.position, self.pointB.position)
+        maxLength = (self.length + weakStickStrength)
+        minLength = (self.length - weakStickStrength)
+        alpha = abs(Map(dist, minLength, maxLength, -1, 1))
+
+        #print(alpha)
+        if alpha >= 1:
+            self.Break()
+
         super().Simulate()
-
-        if Vector2D.Distance(self.pointA.position, self.pointB.position) > self.length + weakStickStrength:
-            self.Break()
-
-        if Vector2D.Distance(self.pointA.position, self.pointB.position) < self.length - weakStickStrength:
-            self.Break()
 
 class RopeStick(Stick):
     def CalcColour(self):
@@ -593,24 +602,27 @@ class Raycast(object):
         i = 0
         for point in points:
             if not point == ignore:
-                # Calculate delta to point
-                center = (self.start + self.stop) / 2
-                delta = point.position - center
+                # Save performance by checking if point is valid for raycast
+                if min(Vector2D.Distance(self.start, point.position), Vector2D.Distance(self.stop, point.position)) <= Vector2D.Distance(self.start, self.stop)/2:
 
-                # Project delta to ray
-                projected = Vector2D.Project(delta, ray)
+                    # Calculate delta to point
+                    center = (self.start + self.stop) / 2
+                    delta = point.position - center
 
-                # Clamp distance check to the ray
-                projected = projected.getNormalised() * min(projected.length, ray.length/2)
-                
-                # Check if point distance to point on ray is smaller than circleRadius
-                if Vector2D.Distance(center + projected, point.position) <= circleRadius:
-                    # Calculate normal from actual point to ray point.
-                    normal = ((center + projected) - point.position).getNormalised()
+                    # Project delta to ray
+                    projected = Vector2D.Project(delta, ray)
 
-                    # Calculate hit location by multiplying normal by circle radius and adding actual point position
-                    hitLoc = (normal * circleRadius) + point.position
-                    return RaycastData(point, i, hitLoc, self, normal)
+                    # Clamp distance check to the ray
+                    projected = projected.getNormalised() * min(projected.length, ray.length/2)
+                    
+                    # Check if point distance to point on ray is smaller than circleRadius
+                    if Vector2D.Distance(center + projected, point.position) <= circleRadius:
+                        # Calculate normal from actual point to ray point.
+                        normal = ((center + projected) - point.position).getNormalised()
+
+                        # Calculate hit location by multiplying normal by circle radius and adding actual point position
+                        hitLoc = (normal * circleRadius) + point.position
+                        return RaycastData(point, i, hitLoc, self, normal)
             i += 1
         return None
     
@@ -620,26 +632,43 @@ class Raycast(object):
         i = 0
         for stick in sticks:
             if not stick in ignores:
-                inter = Vector2D.Intersection(self.start, self.stop, stick.pointA.position, stick.pointB.position)
-                if inter:
-                    stickDir = (stick.pointB.position - stick.pointA.position).getNormalised()
-                    normal = None
-                    stickRight = Vector2D(stickDir.y, -stickDir.x)
-                    dot = Vector2D.DotProduct(stickRight, rayDir)
-                    print(dot)
-                    if dot <= 0:
-                        # Clockwise perpendicular
-                        normal = stickRight
-                    else:
-                        # Counter-Clockwise perpendicular
-                        normal = Vector2D(-stickDir.y, stickDir.x)
-                    return RaycastData(stick, i, inter, self, normal)
+                rayBox = Rect(self.start.x, self.stop.x, self.start.y, self.stop.y)
+                stickBox = Rect(stick.pointA.position.x, stick.pointB.position.x, stick.pointA.position.y, stick.pointB.position.y)
+
+                # Save performance by doing rough intersection check
+                if rayBox.IsIntersecting(stickBox):
+
+                    inter = Vector2D.Intersection(self.start, self.stop, stick.pointA.position, stick.pointB.position)
+                    if inter:
+                        stickDir = (stick.pointB.position - stick.pointA.position).getNormalised()
+                        normal = None
+                        stickRight = Vector2D(stickDir.y, -stickDir.x)
+                        dot = Vector2D.DotProduct(stickRight, rayDir)
+                        #print(dot)
+                        if dot <= 0:
+                            # Clockwise perpendicular
+                            normal = stickRight
+                        else:
+                            # Counter-Clockwise perpendicular
+                            normal = Vector2D(-stickDir.y, stickDir.x)
+                        return RaycastData(stick, i, inter, self, normal)
             i += 1
         return None
                     
 
     def __str__(self):
         return f"Raycast {{start:{str(self.start)}, stop:{str(self.stop)}}}"
+
+class Rect(object):
+    def __init__(self, left, right, top, bottom):
+        self.left = min(left, right)
+        self.right = max(left, right)
+        self.top = min(top, bottom)
+        self.bottom = max(bottom, top)
+    
+    def IsIntersecting(self, other):
+        return self.left <= other.right and self.right >= other.left and self.top <= other.bottom and self.bottom >= other.top
+
 # ------------[UTIL CLASSES]----------
 
 # ------------[UTIL FUNCTIONS]------------
