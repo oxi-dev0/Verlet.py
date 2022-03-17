@@ -25,14 +25,14 @@ import random
 intercollision = False
 
 args = sys.argv
-if "-configured" not in args:
+if "-configured" not in args and False:
     DETACHED_PROCESS = 8
     subprocess.Popen(f'python "{os.getcwd()}/options.py"', creationflags=DETACHED_PROCESS, close_fds=True)
 
     sleep(0.5)
     os._exit(1)
 else:
-    if "-intercollision" in args:
+    if "-intercollision" in args or True:
         intercollision = True
             
 # ------------[CONFIG VARS]------------
@@ -376,6 +376,10 @@ class Stick:
             if windowCollide:
                 self.pointA.position.x = Clamp(self.pointA.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
                 self.pointA.position.y = Clamp(self.pointA.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
+
+        else:
+            if self.pointB.locked:
+                self.length = Vector2D.Distance(self.pointA.position, self.pointB.position)
 
         # If pointB is not a fixed point 
         if not self.pointB.locked:
