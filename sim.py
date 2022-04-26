@@ -243,7 +243,7 @@ class Point(object):
             fullForce = data.normal*velo
 
             aAlpha = Vector2D.InverseLerp(data.obj.pointB.position, data.obj.pointA.position, data.hitLoc)
-            bAlpha = Vector2D.InverseLerp(data.obj.pointA.position, data.obj.pointB.position, data.hitLoc)
+            bAlpha = 1-aAlpha
 
             data.obj.pointA.Move(data.obj.pointA.position - (fullForce*aAlpha))
             data.obj.pointB.Move(data.obj.pointB.position - (fullForce*bAlpha))
@@ -370,28 +370,27 @@ class Stick:
             
             # Set pointA's position to where the stick expects it to be.
             if not onlyClamp:
-                self.pointA.position = stickCenter + (stickDir * self.length/2)
+                self.pointA.Move(stickCenter + (stickDir * self.length/2))
 
             # Clamp pointA to the window bounds
             if windowCollide:
-                self.pointA.position.x = Clamp(self.pointA.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
-                self.pointA.position.y = Clamp(self.pointA.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
+                self.pointA.Move(Vector2D(Clamp(self.pointA.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x),Clamp(self.pointA.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)))
 
         else:
             if self.pointB.locked:
                 self.length = Vector2D.Distance(self.pointA.position, self.pointB.position)
+                debug = True
 
         # If pointB is not a fixed point 
         if not self.pointB.locked:
             
             # Set pointB's position to where the stick expects it to be.
             if not onlyClamp:
-                self.pointB.position = stickCenter - (stickDir * (self.length/2))
+                self.pointB.Move(stickCenter - (stickDir * (self.length/2)))
 
             # Clamp pointB to the window bounds
             if windowCollide:
-                self.pointB.position.x = Clamp(self.pointB.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x)
-                self.pointB.position.y = Clamp(self.pointB.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)
+                self.pointB.Move(Vector2D(Clamp(self.pointB.position.x, 10+camPos.x, window.winfo_width()-10+camPos.x),Clamp(self.pointB.position.y, 10+camPos.y, window.winfo_height()-30+camPos.y)))
 
 class WeakStick(Stick):
     def CalcColour(self):
