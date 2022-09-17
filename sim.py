@@ -25,7 +25,7 @@ import random
 intercollision = False
 
 args = sys.argv
-if "-configured" not in args and False:
+if "-configured" not in args and True:
     DETACHED_PROCESS = 8
     subprocess.Popen(f'python "{os.getcwd()}/options.py"', creationflags=DETACHED_PROCESS, close_fds=True)
 
@@ -642,7 +642,7 @@ class Raycast(object):
                 if rayBox.IsIntersecting(stickBox):
 
                     inter = Vector2D.Intersection(self.start, self.stop, stick.pointA.position, stick.pointB.position)
-                    if inter:
+                    if inter != None:
                         stickDir = (stick.pointB.position - stick.pointA.position).getNormalised()
                         normal = None
                         stickRight = Vector2D(stickDir.y, -stickDir.x)
